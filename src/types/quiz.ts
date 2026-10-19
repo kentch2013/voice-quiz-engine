@@ -12,6 +12,7 @@ export type WidgetType =
   | 'placevalue'
   | 'coin'
   | 'equation'
+  | 'colorswatch'
   | 'none';
 
 export interface QuizOption {
@@ -80,6 +81,12 @@ export interface EquationProps {
   displayFormat?: 'equation' | 'sequence' | 'comparison';
 }
 
+export interface ColorSwatchProps {
+  colorName: string;
+  hexColor: string;
+  label?: string;
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -91,6 +98,7 @@ export interface WidgetConfig {
   placeValueProps?: PlaceValueProps;
   coinProps?: CoinProps;
   equationProps?: EquationProps;
+  colorSwatchProps?: ColorSwatchProps;
 }
 
 export interface KeypadConfig {

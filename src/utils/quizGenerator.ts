@@ -86,6 +86,48 @@ export const TOPICS: Topic[] = [
     icon: '🔤',
     gradeBands: ['K-1', '2-3'],
   },
+  {
+    id: 'letter-identification',
+    title: '🔤 Letter Identification',
+    description: 'Practice uppercase and lowercase letter flashcards.',
+    icon: '🔤',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'beginning-letter-sounds',
+    title: '🗣️ Beginning Letter Sounds',
+    description: 'Identify the initial letter sound for pictured words.',
+    icon: '🗣️',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'rhyme-matching',
+    title: '🎵 Rhyme Matching',
+    description: 'Match words that rhyme with the target prompt word.',
+    icon: '🎵',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'opposites-antonyms',
+    title: '↔️ Opposites & Antonyms',
+    description: 'Identify antonyms and word opposites.',
+    icon: '↔️',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'plural-forms',
+    title: '📦 Plural Forms',
+    description: 'Convert singular words into their plural forms.',
+    icon: '📦',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'color-words',
+    title: '🎨 Color Words',
+    description: 'Recognize colors from vibrant visual swatches.',
+    icon: '🎨',
+    gradeBands: ['K-1', '2-3'],
+  },
 ];
 
 export function generateQuizItems(
@@ -116,6 +158,18 @@ export function generateQuizItems(
       return generateDotItems(gradeBand, count);
     case 'sight-words':
       return generateSightWordItems(gradeBand, count);
+    case 'letter-identification':
+      return generateLetterIdentificationItems(gradeBand, count);
+    case 'beginning-letter-sounds':
+      return generateBeginningLetterSoundsItems(gradeBand, count);
+    case 'rhyme-matching':
+      return generateRhymeMatchingItems(gradeBand, count);
+    case 'opposites-antonyms':
+      return generateOppositesAntonymsItems(gradeBand, count);
+    case 'plural-forms':
+      return generatePluralFormsItems(gradeBand, count);
+    case 'color-words':
+      return generateColorWordsItems(gradeBand, count);
     case 'math-sprint':
     default:
       return generateMathItems(gradeBand, count);
@@ -487,6 +541,349 @@ function generateShapeItems(gradeBand: GradeBand, count: number): QuizItem[] {
       keypad: {
         type: 'choice',
         options,
+      },
+    });
+  }
+
+  return items;
+}
+
+const LETTER_SPOKEN_NAMES: Record<string, string[]> = {
+  a: ['a', 'ay', 'letter a'],
+  b: ['b', 'bee', 'letter b'],
+  c: ['c', 'cee', 'see', 'letter c'],
+  d: ['d', 'dee', 'letter d'],
+  e: ['e', 'ee', 'letter e'],
+  f: ['f', 'ef', 'eff', 'letter f'],
+  g: ['g', 'gee', 'letter g'],
+  h: ['h', 'aitch', 'heitch', 'letter h'],
+  i: ['i', 'eye', 'letter i'],
+  j: ['j', 'jay', 'letter j'],
+  k: ['k', 'kay', 'letter k'],
+  l: ['l', 'el', 'ell', 'letter l'],
+  m: ['m', 'em', 'letter m'],
+  n: ['n', 'en', 'letter n'],
+  o: ['o', 'oh', 'letter o'],
+  p: ['p', 'pee', 'letter p'],
+  q: ['q', 'cue', 'letter q'],
+  r: ['r', 'ar', 'are', 'letter r'],
+  s: ['s', 'ess', 'letter s'],
+  t: ['t', 'tee', 'tea', 'letter t'],
+  u: ['u', 'you', 'letter u'],
+  v: ['v', 'vee', 'letter v'],
+  w: ['w', 'double u', 'double-u', 'letter w'],
+  x: ['x', 'ex', 'letter x'],
+  y: ['y', 'why', 'letter y'],
+  z: ['z', 'zee', 'zed', 'letter z'],
+};
+
+function getLetterAcceptableAnswers(letterChar: string): string[] {
+  const lower = letterChar.toLowerCase();
+  const upper = letterChar.toUpperCase();
+  const phonetics = LETTER_SPOKEN_NAMES[lower] || [lower];
+  const combined = new Set<string>([
+    lower,
+    upper,
+    ...phonetics,
+    ...phonetics.map((p) => p.toUpperCase()),
+  ]);
+  return Array.from(combined);
+}
+
+function generateLetterIdentificationItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const letter = letters[(i * 3 + 1) % letters.length];
+    const isUpper = letter === letter.toUpperCase();
+
+    items.push({
+      id: `letter-${i}-${Date.now()}`,
+      topicId: 'letter-identification',
+      gradeBand,
+      prompt: `What ${isUpper ? 'uppercase' : 'lowercase'} letter is this?`,
+      ttsPrompt: `What letter is this?`,
+      expectedAnswer: letter,
+      acceptableAnswers: getLetterAcceptableAnswers(letter),
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: letter,
+          category: 'letter',
+          fontSize: '96px',
+        },
+      },
+      keypad: {
+        type: 'alphabet',
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateBeginningLetterSoundsItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const soundPool = [
+    { word: 'Duck', emoji: '🦆', letter: 'D' },
+    { word: 'Apple', emoji: '🍎', letter: 'A' },
+    { word: 'Cat', emoji: '🐱', letter: 'C' },
+    { word: 'Bear', emoji: '🐻', letter: 'B' },
+    { word: 'Fish', emoji: '🐟', letter: 'F' },
+    { word: 'Lion', emoji: '🦁', letter: 'L' },
+    { word: 'Monkey', emoji: '🐒', letter: 'M' },
+    { word: 'Sun', emoji: '☀️', letter: 'S' },
+    { word: 'Tiger', emoji: '🐯', letter: 'T' },
+    { word: 'Zebra', emoji: '🦓', letter: 'Z' },
+    { word: 'Pig', emoji: '🐷', letter: 'P' },
+    { word: 'Snake', emoji: '🐍', letter: 'S' },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const entry = soundPool[i % soundPool.length];
+
+    items.push({
+      id: `bg-sound-${i}-${Date.now()}`,
+      topicId: 'beginning-letter-sounds',
+      gradeBand,
+      prompt: `What letter does ${entry.word} start with?`,
+      ttsPrompt: `What letter does ${entry.word} start with?`,
+      expectedAnswer: entry.letter,
+      acceptableAnswers: getLetterAcceptableAnswers(entry.letter),
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: `${entry.emoji} ${entry.word}`,
+          category: 'phonics',
+          fontSize: '64px',
+        },
+      },
+      keypad: {
+        type: 'alphabet',
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateRhymeMatchingItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const rhymePool = [
+    { promptWord: 'Cat', emoji: '🐱', correct: 'Hat', distractors: ['Dog', 'Sun', 'Pig'] },
+    { promptWord: 'Dog', emoji: '🐶', correct: 'Log', distractors: ['Cat', 'Pen', 'Box'] },
+    { promptWord: 'Sun', emoji: '☀️', correct: 'Fun', distractors: ['Pig', 'Hat', 'Top'] },
+    { promptWord: 'Frog', emoji: '🐸', correct: 'Dog', distractors: ['Star', 'Bed', 'Car'] },
+    { promptWord: 'Bed', emoji: '🛏️', correct: 'Red', distractors: ['Cup', 'Fish', 'Map'] },
+    { promptWord: 'Pig', emoji: '🐷', correct: 'Big', distractors: ['Tree', 'Map', 'Sun'] },
+    { promptWord: 'Star', emoji: '⭐', correct: 'Car', distractors: ['Book', 'Duck', 'Pen'] },
+    { promptWord: 'Fox', emoji: '🦊', correct: 'Box', distractors: ['Moon', 'Key', 'Cat'] },
+    { promptWord: 'Bear', emoji: '🐻', correct: 'Chair', distractors: ['Ring', 'Top', 'Log'] },
+    { promptWord: 'Ring', emoji: '💍', correct: 'King', distractors: ['Boat', 'Shoe', 'Dog'] },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const entry = rhymePool[i % rhymePool.length];
+    const optionsList = [entry.correct, ...entry.distractors.slice(0, 3)].map((val) => ({
+      id: val.toLowerCase(),
+      label: val,
+      value: val,
+    }));
+
+    items.push({
+      id: `rhyme-${i}-${Date.now()}`,
+      topicId: 'rhyme-matching',
+      gradeBand,
+      prompt: `Which word rhymes with ${entry.promptWord}?`,
+      ttsPrompt: `Which word rhymes with ${entry.promptWord}?`,
+      expectedAnswer: entry.correct,
+      acceptableAnswers: [
+        entry.correct,
+        entry.correct.toLowerCase(),
+        entry.correct.toUpperCase(),
+        `${entry.correct.toLowerCase()}s`,
+      ],
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: `${entry.emoji} ${entry.promptWord.toUpperCase()}`,
+          subtext: `Find the rhyming word`,
+          category: 'phonics',
+          fontSize: '56px',
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: optionsList,
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateOppositesAntonymsItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const antonymPool = [
+    { word: 'Cold', emoji: '🧊', opposite: 'Hot', distractors: ['Warm', 'Soft', 'Cool'] },
+    { word: 'Big', emoji: '🐘', opposite: 'Small', distractors: ['Large', 'Heavy', 'Tall'] },
+    { word: 'Fast', emoji: '🏎️', opposite: 'Slow', distractors: ['Quick', 'Hard', 'High'] },
+    { word: 'Up', emoji: '⬆️', opposite: 'Down', distractors: ['Left', 'Right', 'Top'] },
+    { word: 'Happy', emoji: '😊', opposite: 'Sad', distractors: ['Glad', 'Mad', 'Nice'] },
+    { word: 'Day', emoji: '☀️', opposite: 'Night', distractors: ['Noon', 'Dark', 'Moon'] },
+    { word: 'Heavy', emoji: '🏋️', opposite: 'Light', distractors: ['Hard', 'Big', 'Soft'] },
+    { word: 'Wet', emoji: '🌧️', opposite: 'Dry', distractors: ['Cold', 'Warm', 'Soft'] },
+    { word: 'Open', emoji: '🚪', opposite: 'Closed', distractors: ['Shut', 'Wide', 'Lock'] },
+    { word: 'High', emoji: '🏔️', opposite: 'Low', distractors: ['Short', 'Deep', 'Tall'] },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const entry = antonymPool[i % antonymPool.length];
+    const optionsList = [entry.opposite, ...entry.distractors.slice(0, 3)].map((val) => ({
+      id: val.toLowerCase(),
+      label: val,
+      value: val,
+    }));
+
+    items.push({
+      id: `antonym-${i}-${Date.now()}`,
+      topicId: 'opposites-antonyms',
+      gradeBand,
+      prompt: `What is the opposite of ${entry.word}?`,
+      ttsPrompt: `What is the opposite of ${entry.word}?`,
+      expectedAnswer: entry.opposite,
+      acceptableAnswers: [
+        entry.opposite,
+        entry.opposite.toLowerCase(),
+        entry.opposite.toUpperCase(),
+      ],
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: `${entry.emoji} ${entry.word}`,
+          subtext: `Opposite of ${entry.word}?`,
+          category: 'phonics',
+          fontSize: '56px',
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: optionsList,
+      },
+    });
+  }
+
+  return items;
+}
+
+function generatePluralFormsItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const pluralPool = [
+    { singular: 'Dog', emoji: '🐶', plural: 'Dogs', distractors: ['Doges', 'Dog', 'Dogies'] },
+    { singular: 'Cat', emoji: '🐱', plural: 'Cats', distractors: ['Cates', 'Cat', 'Kittens'] },
+    { singular: 'Box', emoji: '📦', plural: 'Boxes', distractors: ['Boxs', 'Box', 'Boxies'] },
+    { singular: 'Bus', emoji: '🚌', plural: 'Buses', distractors: ['Buss', 'Bus', 'Buseses'] },
+    { singular: 'Fox', emoji: '🦊', plural: 'Foxes', distractors: ['Foxs', 'Fox', 'Foxies'] },
+    { singular: 'Apple', emoji: '🍎', plural: 'Apples', distractors: ['Apple', 'Appless', 'Applies'] },
+    { singular: 'Book', emoji: '📚', plural: 'Books', distractors: ['Bookes', 'Book', 'Bookies'] },
+    { singular: 'Child', emoji: '🧒', plural: 'Children', distractors: ['Childs', 'Childes', 'Child'] },
+    { singular: 'Foot', emoji: '🦶', plural: 'Feet', distractors: ['Foots', 'Footes', 'Foot'] },
+    { singular: 'Mouse', emoji: '🐭', plural: 'Mice', distractors: ['Mouses', 'Micees', 'Mouse'] },
+    { singular: 'Tooth', emoji: '🦷', plural: 'Teeth', distractors: ['Tooths', 'Toothes', 'Tooth'] },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const entry = pluralPool[i % pluralPool.length];
+    const optionsList = [entry.plural, ...entry.distractors.slice(0, 3)].map((val) => ({
+      id: val.toLowerCase(),
+      label: val,
+      value: val,
+    }));
+
+    items.push({
+      id: `plural-${i}-${Date.now()}`,
+      topicId: 'plural-forms',
+      gradeBand,
+      prompt: `1 ${entry.singular} ➔ 3 ___?`,
+      ttsPrompt: `If you have one ${entry.singular}, what is the word for three of them?`,
+      expectedAnswer: entry.plural,
+      acceptableAnswers: [
+        entry.plural,
+        entry.plural.toLowerCase(),
+        entry.plural.toUpperCase(),
+        `3 ${entry.plural.toLowerCase()}`,
+      ],
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: `1 ${entry.singular} ${entry.emoji} ➔ 3 ___?`,
+          subtext: `What is the plural form?`,
+          category: 'phonics',
+          fontSize: '44px',
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: optionsList,
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateColorWordsItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const colorPool = [
+    { name: 'Red', hex: '#ef4444', distractors: ['Blue', 'Green', 'Yellow'] },
+    { name: 'Blue', hex: '#3b82f6', distractors: ['Red', 'Purple', 'Green'] },
+    { name: 'Green', hex: '#22c55e', distractors: ['Yellow', 'Blue', 'Brown'] },
+    { name: 'Yellow', hex: '#eab308', distractors: ['Orange', 'White', 'Green'] },
+    { name: 'Purple', hex: '#8b5cf6', distractors: ['Pink', 'Blue', 'Red'] },
+    { name: 'Orange', hex: '#f97316', distractors: ['Red', 'Yellow', 'Brown'] },
+    { name: 'Pink', hex: '#ec4899', distractors: ['Purple', 'Red', 'White'] },
+    { name: 'Brown', hex: '#78350f', distractors: ['Black', 'Orange', 'Green'] },
+    { name: 'Black', hex: '#0f172a', distractors: ['Brown', 'White', 'Blue'] },
+    { name: 'White', hex: '#f8fafc', distractors: ['Yellow', 'Pink', 'Gray'] },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const entry = colorPool[i % colorPool.length];
+    const optionsList = [entry.name, ...entry.distractors.slice(0, 3)].map((val) => ({
+      id: val.toLowerCase(),
+      label: val,
+      value: val,
+    }));
+
+    items.push({
+      id: `color-${i}-${Date.now()}`,
+      topicId: 'color-words',
+      gradeBand,
+      prompt: `What color is shown?`,
+      ttsPrompt: `What color is this swatch?`,
+      expectedAnswer: entry.name,
+      acceptableAnswers: [
+        entry.name,
+        entry.name.toLowerCase(),
+        entry.name.toUpperCase(),
+        `color ${entry.name.toLowerCase()}`,
+      ],
+      widget: {
+        type: 'colorswatch',
+        colorSwatchProps: {
+          colorName: entry.name.toLowerCase(),
+          hexColor: entry.hex,
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: optionsList,
       },
     });
   }
