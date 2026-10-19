@@ -40,6 +40,15 @@ describe('Batch 1 Widget Components', () => {
       const collection = screen.getByLabelText(/Collection of US coins/i);
       expect(collection).toBeDefined();
     });
+
+    it('renders Educational Scale Reference Tray with all four coins', () => {
+      render(<SvgCoin coin="dime" />);
+      expect(screen.getByText(/Size Reference Tray/i)).toBeDefined();
+      expect(screen.getByAltText(/Reference Dime/i)).toBeDefined();
+      expect(screen.getByAltText(/Reference Penny/i)).toBeDefined();
+      expect(screen.getByAltText(/Reference Nickel/i)).toBeDefined();
+      expect(screen.getByAltText(/Reference Quarter/i)).toBeDefined();
+    });
   });
 
   describe('SvgEquationCard', () => {
