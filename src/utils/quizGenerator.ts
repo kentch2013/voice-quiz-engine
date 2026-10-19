@@ -1,4 +1,4 @@
-import type { Topic, GradeBand, QuizItem } from '../types/quiz';
+import type { Topic, GradeBand, QuizItem, CoinType } from '../types/quiz';
 import { generateMathProblems } from './mathGenerator';
 
 export const TOPICS: Topic[] = [
@@ -54,7 +54,7 @@ export const TOPICS: Topic[] = [
   {
     id: 'coin-identification',
     title: '🪙 Coin Identification',
-    description: 'Identify US pennies, nickels, dimes, quarters, and their values.',
+    description: 'Count total value of US coins in cents.',
     icon: '🪙',
     gradeBands: ['K-1', '2-3'],
   },
@@ -122,13 +122,6 @@ export const TOPICS: Topic[] = [
     gradeBands: ['K-1', '2-3'],
   },
   {
-    id: 'color-words',
-    title: '🎨 Color Words',
-    description: 'Recognize colors from vibrant visual swatches.',
-    icon: '🎨',
-    gradeBands: ['K-1', '2-3'],
-  },
-  {
     id: 'even-or-odd',
     title: '⚖️ Even or Odd',
     description: 'Determine whether numbers are even or odd.',
@@ -150,6 +143,29 @@ export const TOPICS: Topic[] = [
     gradeBands: ['K-1', '2-3'],
   },
 ];
+
+export function getTTSPrompt(
+  item: QuizItem,
+  language: 'en-US' | 'zh-CN',
+  index: number
+): string {
+  const isConcise = index > 0;
+
+  if (language === 'zh-CN') {
+    if (isConcise && item.ttsPromptZhConcise) {
+      return item.ttsPromptZhConcise;
+    }
+    if (item.ttsPromptZh) {
+      return item.ttsPromptZh;
+    }
+    return item.prompt;
+  }
+
+  if (isConcise && item.ttsPromptConcise) {
+    return item.ttsPromptConcise;
+  }
+  return item.ttsPrompt || item.prompt;
+}
 
 export function generateQuizItems(
   topicId: string,
@@ -189,8 +205,6 @@ export function generateQuizItems(
       return generateOppositesAntonymsItems(gradeBand, count);
     case 'plural-forms':
       return generatePluralFormsItems(gradeBand, count);
-    case 'color-words':
-      return generateColorWordsItems(gradeBand, count);
     case 'even-or-odd':
       return generateEvenOrOddItems(gradeBand, count);
     case 'spatial-prepositions':
@@ -211,6 +225,9 @@ function generateMathItems(gradeBand: GradeBand, count: number): QuizItem[] {
     gradeBand,
     prompt: `${prob.operandA} × ${prob.operandB} = ?`,
     ttsPrompt: `What is ${prob.operandA} times ${prob.operandB}?`,
+    ttsPromptConcise: `${prob.operandA} times ${prob.operandB}`,
+    ttsPromptZh: `${prob.operandA} 乘以 ${prob.operandB} 等于多少?`,
+    ttsPromptZhConcise: `${prob.operandA} 乘以 ${prob.operandB}`,
     expectedAnswer: prob.expectedAnswer,
     acceptableAnswers: [prob.expectedAnswer],
     operandA: prob.operandA,
@@ -233,6 +250,9 @@ function generateSingleDigitAdditionItems(gradeBand: GradeBand, count: number): 
       gradeBand,
       prompt: `${operandA} + ${operandB} = ?`,
       ttsPrompt: `What is ${operandA} plus ${operandB}?`,
+      ttsPromptConcise: `${operandA} plus ${operandB}`,
+      ttsPromptZh: `${operandA} 加 ${operandB} 等于多少?`,
+      ttsPromptZhConcise: `${operandA} 加 ${operandB}`,
       expectedAnswer: expected,
       acceptableAnswers: [expected, expected.toString()],
       operandA,
@@ -267,6 +287,9 @@ function generateSingleDigitSubtractionItems(gradeBand: GradeBand, count: number
       gradeBand,
       prompt: `${operandA} - ${operandB} = ?`,
       ttsPrompt: `What is ${operandA} minus ${operandB}?`,
+      ttsPromptConcise: `${operandA} minus ${operandB}`,
+      ttsPromptZh: `${operandA} 减 ${operandB} 等于多少?`,
+      ttsPromptZhConcise: `${operandA} 减 ${operandB}`,
       expectedAnswer: expected,
       acceptableAnswers: [expected, expected.toString()],
       operandA,
@@ -291,7 +314,7 @@ function generateSingleDigitSubtractionItems(gradeBand: GradeBand, count: number
 function generateNumberBonds10Items(gradeBand: GradeBand, count: number): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
-    const givenAddend = Math.floor(Math.random() * 11); // 0 to 10
+    const givenAddend = Math.floor(Math.random() * 11);
     const missingAddend = 10 - givenAddend;
 
     items.push({
@@ -300,6 +323,9 @@ function generateNumberBonds10Items(gradeBand: GradeBand, count: number): QuizIt
       gradeBand,
       prompt: `${givenAddend} + ___ = 10`,
       ttsPrompt: `${givenAddend} plus what number equals 10?`,
+      ttsPromptConcise: `${givenAddend} plus what equals 10`,
+      ttsPromptZh: `${givenAddend} 加几等于 10?`,
+      ttsPromptZhConcise: `${givenAddend} 加几等于 10`,
       expectedAnswer: missingAddend,
       acceptableAnswers: [missingAddend, missingAddend.toString()],
       operandA: givenAddend,
@@ -337,6 +363,9 @@ function generateSkipCountingItems(gradeBand: GradeBand, count: number): QuizIte
       gradeBand,
       prompt: `${seq.join(', ')}, ___`,
       ttsPrompt: `What number comes next in the sequence: ${seq.join(', ')}?`,
+      ttsPromptConcise: `${seq.join(', ')}`,
+      ttsPromptZh: `序列 ${seq.join(', ')} 的下一个数字是什么?`,
+      ttsPromptZhConcise: `${seq.join(', ')}`,
       expectedAnswer: missing,
       acceptableAnswers: [missing, missing.toString()],
       widget: {
@@ -375,6 +404,9 @@ function generateGreaterLessThanItems(gradeBand: GradeBand, count: number): Quiz
       gradeBand,
       prompt: `Which is ${isBigger ? 'bigger' : 'smaller'}? ${numA} or ${numB}`,
       ttsPrompt: `Which number is ${isBigger ? 'bigger' : 'smaller'}: ${numA} or ${numB}?`,
+      ttsPromptConcise: `${isBigger ? 'Bigger' : 'Smaller'}: ${numA} or ${numB}`,
+      ttsPromptZh: `${numA} 和 ${numB}，哪个更${isBigger ? '大' : '小'}?`,
+      ttsPromptZhConcise: `${numA} 和 ${numB} 哪个更${isBigger ? '大' : '小'}`,
       expectedAnswer: expected,
       acceptableAnswers: [expected, expected.toString()],
       widget: {
@@ -401,8 +433,8 @@ function generateGreaterLessThanItems(gradeBand: GradeBand, count: number): Quiz
 function generatePlaceValueBlocksItems(gradeBand: GradeBand, count: number): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
-    const tens = Math.floor(Math.random() * 9) + 1; // 1 to 9
-    const ones = Math.floor(Math.random() * 10); // 0 to 9
+    const tens = Math.floor(Math.random() * 9) + 1;
+    const ones = Math.floor(Math.random() * 10);
     const total = tens * 10 + ones;
 
     items.push({
@@ -411,6 +443,9 @@ function generatePlaceValueBlocksItems(gradeBand: GradeBand, count: number): Qui
       gradeBand,
       prompt: `What number is shown by the blocks?`,
       ttsPrompt: `Count the tens rods and unit cubes. What number is shown?`,
+      ttsPromptConcise: `What number is shown?`,
+      ttsPromptZh: `数一数十位棒和个位块，显示的数字是多少?`,
+      ttsPromptZhConcise: `显示的数字是多少?`,
       expectedAnswer: total,
       acceptableAnswers: [total, total.toString()],
       widget: {
@@ -429,97 +464,128 @@ function generatePlaceValueBlocksItems(gradeBand: GradeBand, count: number): Qui
 }
 
 function generateCoinIdentificationItems(gradeBand: GradeBand, count: number): QuizItem[] {
-  const coinsPool: { id: 'penny' | 'nickel' | 'dime' | 'quarter'; name: string; label: string; value: number }[] = [
-    { id: 'penny', name: 'penny', label: 'Penny', value: 1 },
-    { id: 'nickel', name: 'nickel', label: 'Nickel', value: 5 },
-    { id: 'dime', name: 'dime', label: 'Dime', value: 10 },
-    { id: 'quarter', name: 'quarter', label: 'Quarter', value: 25 },
+  const items: QuizItem[] = [];
+
+  const coinValues: Record<CoinType, number> = { penny: 1, nickel: 5, dime: 10, quarter: 25 };
+  const coinLabels: Record<CoinType, string> = { penny: 'Penny', nickel: 'Nickel', dime: 'Dime', quarter: 'Quarter' };
+  const coinLabelsZh: Record<CoinType, string> = { penny: '一美分', nickel: '五美分', dime: '十美分', quarter: '二十五美分' };
+
+  const clusters: CoinType[][] = [
+    ['quarter', 'quarter', 'dime', 'penny', 'penny', 'penny'],
+    ['quarter', 'dime', 'dime', 'nickel', 'penny'],
+    ['dime', 'dime', 'nickel', 'nickel', 'penny', 'penny'],
+    ['quarter', 'quarter', 'quarter', 'nickel'],
+    ['quarter', 'dime', 'nickel', 'penny', 'penny'],
+    ['dime', 'dime', 'dime', 'penny', 'penny', 'penny', 'penny'],
+    ['quarter', 'quarter', 'dime', 'dime', 'nickel'],
+    ['nickel', 'nickel', 'nickel', 'penny', 'penny'],
   ];
 
-  const items: QuizItem[] = [];
-  for (let i = 0; i < count; i++) {
-    const coin = coinsPool[i % coinsPool.length];
-    const isNameQuestion = i % 2 === 0;
+  const singleCoins: CoinType[] = ['quarter', 'dime', 'nickel', 'penny'];
 
-    if (isNameQuestion) {
+  for (let i = 0; i < count; i++) {
+    const isSingle = i % 3 === 0;
+
+    if (isSingle) {
+      const coin = singleCoins[i % singleCoins.length];
+      const val = coinValues[coin];
+      const label = coinLabels[coin];
+      const labelZh = coinLabelsZh[coin];
+
+      const distractors = [val + 5, Math.max(1, val - 5), val + 10, 1].filter((d) => d !== val).slice(0, 3);
+      const options = [val, ...distractors]
+        .sort(() => Math.random() - 0.5)
+        .map((v) => ({ id: v.toString(), label: `${v}¢`, value: v.toString() }));
+
       items.push({
         id: `coin-${i}-${Date.now()}`,
         topicId: 'coin-identification',
         gradeBand,
-        prompt: `What coin is this?`,
-        ttsPrompt: `What coin is this?`,
-        expectedAnswer: coin.name,
+        prompt: `How many cents is a ${label} worth?`,
+        ttsPrompt: `How many cents is a ${label} worth?`,
+        ttsPromptConcise: `${label} value in cents?`,
+        ttsPromptZh: `一枚${labelZh}硬币值多少分?`,
+        ttsPromptZhConcise: `${labelZh}硬币值多少分?`,
+        expectedAnswer: val,
         acceptableAnswers: [
-          coin.name,
-          coin.label,
-          coin.value,
-          coin.value.toString(),
-          `${coin.value} cents`,
-          `${coin.value}c`,
-          `${coin.value}¢`,
+          val,
+          val.toString(),
+          `${val} cents`,
+          `${val}c`,
+          `${val}¢`,
+          `${val}分`,
         ],
         widget: {
           type: 'coin',
           coinProps: {
-            coin: coin.id,
+            coin,
           },
         },
         keypad: {
-          type: 'choice',
-          options: coinsPool.map((c) => ({
-            id: c.id,
-            label: c.label,
-            value: c.name,
-          })),
+          type: i % 2 === 0 ? 'choice' : 'numeric',
+          options: i % 2 === 0 ? options : undefined,
         },
       });
     } else {
+      const cluster = clusters[i % clusters.length];
+      const totalCents = cluster.reduce((sum, c) => sum + coinValues[c], 0);
+
+      const distractors = [
+        totalCents + 10,
+        Math.max(5, totalCents - 10),
+        totalCents + 5,
+        totalCents - 5,
+      ].filter((d) => d > 0 && d !== totalCents).slice(0, 3);
+
+      const options = [totalCents, ...distractors]
+        .sort(() => Math.random() - 0.5)
+        .map((v) => ({ id: v.toString(), label: `${v}¢`, value: v.toString() }));
+
       items.push({
         id: `coin-${i}-${Date.now()}`,
         topicId: 'coin-identification',
         gradeBand,
-        prompt: `How many cents is a ${coin.label} worth?`,
-        ttsPrompt: `How many cents is a ${coin.label} worth?`,
-        expectedAnswer: coin.value,
+        prompt: `Count the coins: total value in cents?`,
+        ttsPrompt: `What is the total value of these coins in cents?`,
+        ttsPromptConcise: `Count total cents`,
+        ttsPromptZh: `这些硬币的总价值是多少分?`,
+        ttsPromptZhConcise: `计算硬币总面值`,
+        expectedAnswer: totalCents,
         acceptableAnswers: [
-          coin.value,
-          coin.value.toString(),
-          coin.name,
-          coin.label,
-          `${coin.value} cents`,
-          `${coin.value}c`,
-          `${coin.value}¢`,
+          totalCents,
+          totalCents.toString(),
+          `${totalCents} cents`,
+          `${totalCents}c`,
+          `${totalCents}¢`,
+          `${totalCents}分`,
         ],
         widget: {
           type: 'coin',
           coinProps: {
-            coin: coin.id,
+            coins: cluster,
           },
         },
         keypad: {
-          type: 'choice',
-          options: coinsPool.map((c) => ({
-            id: c.id,
-            label: `${c.value}¢`,
-            value: c.value.toString(),
-          })),
+          type: i % 2 === 0 ? 'numeric' : 'choice',
+          options: i % 2 !== 0 ? options : undefined,
         },
       });
     }
   }
+
   return items;
 }
 
 function generateShapeItems(gradeBand: GradeBand, count: number): QuizItem[] {
-  const shapesK1: { name: string; tts: string }[] = [
-    { name: 'circle', tts: 'What shape is this circle?' },
-    { name: 'square', tts: 'What shape is this square?' },
-    { name: 'triangle', tts: 'What shape is this triangle?' },
+  const shapesK1: { name: string; tts: string; ttsZh: string }[] = [
+    { name: 'circle', tts: 'What shape is this circle?', ttsZh: '这是什么形状?' },
+    { name: 'square', tts: 'What shape is this square?', ttsZh: '这是什么形状?' },
+    { name: 'triangle', tts: 'What shape is this triangle?', ttsZh: '这是什么形状?' },
   ];
-  const shapesUpper: { name: string; tts: string }[] = [
-    { name: 'hexagon', tts: 'What shape is this six-sided shape?' },
-    { name: 'cylinder', tts: 'What 3D shape is this cylinder?' },
-    { name: 'cube', tts: 'What 3D shape is this cube?' },
+  const shapesUpper: { name: string; tts: string; ttsZh: string }[] = [
+    { name: 'hexagon', tts: 'What shape is this six-sided shape?', ttsZh: '这是什么形状?' },
+    { name: 'cylinder', tts: 'What 3D shape is this cylinder?', ttsZh: '这是什么立体形状?' },
+    { name: 'cube', tts: 'What 3D shape is this cube?', ttsZh: '这是什么立体形状?' },
   ];
 
   const pool = gradeBand === 'K-1' ? shapesK1 : [...shapesK1, ...shapesUpper];
@@ -551,6 +617,7 @@ function generateShapeItems(gradeBand: GradeBand, count: number): QuizItem[] {
       gradeBand,
       prompt: `Identify the shape:`,
       ttsPrompt: item.tts,
+      ttsPromptZh: item.ttsZh,
       expectedAnswer: shapeName,
       acceptableAnswers: [
         shapeName,
@@ -595,6 +662,8 @@ function generateEvenOrOddItems(gradeBand: GradeBand, count: number): QuizItem[]
       'eben',
       'evan',
       'ebin',
+      '偶数',
+      '双数',
     ];
 
     const oddAcceptable = [
@@ -608,6 +677,8 @@ function generateEvenOrOddItems(gradeBand: GradeBand, count: number): QuizItem[]
       'aud',
       'awe',
       'od',
+      '奇数',
+      '单数',
     ];
 
     items.push({
@@ -616,6 +687,9 @@ function generateEvenOrOddItems(gradeBand: GradeBand, count: number): QuizItem[]
       gradeBand,
       prompt: `Is ${num} Even or Odd?`,
       ttsPrompt: `Is ${num} even or odd?`,
+      ttsPromptConcise: `${num} even or odd`,
+      ttsPromptZh: `${num} 是单数还是双数?`,
+      ttsPromptZhConcise: `${num} 单数还是双数`,
       expectedAnswer: expected,
       acceptableAnswers: isEven ? evenAcceptable : oddAcceptable,
       operandA: num,
@@ -724,6 +798,7 @@ function generateSpatialPrepositionsItems(gradeBand: GradeBand, count: number): 
       gradeBand,
       prompt: `Where is the ${scene.subject}?`,
       ttsPrompt: `Where is the ${scene.subject}? Is it ${scene.preposition} or something else?`,
+      ttsPromptZh: `${scene.subject} 在哪里?`,
       expectedAnswer: capitalPrep,
       acceptableAnswers: scene.acceptable,
       widget: {
@@ -828,6 +903,7 @@ function generateOddOneOutItems(gradeBand: GradeBand, count: number): QuizItem[]
       gradeBand,
       prompt: `Which one does not belong?`,
       ttsPrompt: `Which item does not belong in this group? ${entry.choices.join(', ')}`,
+      ttsPromptZh: `哪一个不属于这一组? ${entry.choices.join(', ')}`,
       expectedAnswer: entry.odd,
       acceptableAnswers: entry.acceptable,
       widget: {
@@ -905,6 +981,7 @@ function generateLetterIdentificationItems(gradeBand: GradeBand, count: number):
       gradeBand,
       prompt: `What ${isUpper ? 'uppercase' : 'lowercase'} letter is this?`,
       ttsPrompt: `What letter is this?`,
+      ttsPromptZh: `这是什么字母?`,
       expectedAnswer: letter,
       acceptableAnswers: getLetterAcceptableAnswers(letter),
       widget: {
@@ -951,6 +1028,7 @@ function generateBeginningLetterSoundsItems(gradeBand: GradeBand, count: number)
       gradeBand,
       prompt: `What letter does ${entry.word} start with?`,
       ttsPrompt: `What letter does ${entry.word} start with?`,
+      ttsPromptZh: `${entry.word} 以什么字母开头?`,
       expectedAnswer: entry.letter,
       acceptableAnswers: getLetterAcceptableAnswers(entry.letter),
       widget: {
@@ -1000,6 +1078,7 @@ function generateRhymeMatchingItems(gradeBand: GradeBand, count: number): QuizIt
       gradeBand,
       prompt: `Which word rhymes with ${entry.promptWord}?`,
       ttsPrompt: `Which word rhymes with ${entry.promptWord}?`,
+      ttsPromptZh: `哪个单词和 ${entry.promptWord} 押韵?`,
       expectedAnswer: entry.correct,
       acceptableAnswers: [
         entry.correct,
@@ -1056,6 +1135,7 @@ function generateOppositesAntonymsItems(gradeBand: GradeBand, count: number): Qu
       gradeBand,
       prompt: `What is the opposite of ${entry.word}?`,
       ttsPrompt: `What is the opposite of ${entry.word}?`,
+      ttsPromptZh: `${entry.word} 的反义词是什么?`,
       expectedAnswer: entry.opposite,
       acceptableAnswers: [
         entry.opposite,
@@ -1112,6 +1192,7 @@ function generatePluralFormsItems(gradeBand: GradeBand, count: number): QuizItem
       gradeBand,
       prompt: `1 ${entry.singular} ➔ 3 ___?`,
       ttsPrompt: `If you have one ${entry.singular}, what is the word for three of them?`,
+      ttsPromptZh: `一个 ${entry.singular}，三个是什么?`,
       expectedAnswer: entry.plural,
       acceptableAnswers: [
         entry.plural,
@@ -1126,60 +1207,6 @@ function generatePluralFormsItems(gradeBand: GradeBand, count: number): QuizItem
           subtext: `What is the plural form?`,
           category: 'phonics',
           fontSize: '44px',
-        },
-      },
-      keypad: {
-        type: 'choice',
-        options: optionsList,
-      },
-    });
-  }
-
-  return items;
-}
-
-function generateColorWordsItems(gradeBand: GradeBand, count: number): QuizItem[] {
-  const colorPool = [
-    { name: 'Red', hex: '#ef4444', distractors: ['Blue', 'Green', 'Yellow'] },
-    { name: 'Blue', hex: '#3b82f6', distractors: ['Red', 'Purple', 'Green'] },
-    { name: 'Green', hex: '#22c55e', distractors: ['Yellow', 'Blue', 'Brown'] },
-    { name: 'Yellow', hex: '#eab308', distractors: ['Orange', 'White', 'Green'] },
-    { name: 'Purple', hex: '#8b5cf6', distractors: ['Pink', 'Blue', 'Red'] },
-    { name: 'Orange', hex: '#f97316', distractors: ['Red', 'Yellow', 'Brown'] },
-    { name: 'Pink', hex: '#ec4899', distractors: ['Purple', 'Red', 'White'] },
-    { name: 'Brown', hex: '#78350f', distractors: ['Black', 'Orange', 'Green'] },
-    { name: 'Black', hex: '#0f172a', distractors: ['Brown', 'White', 'Blue'] },
-    { name: 'White', hex: '#f8fafc', distractors: ['Yellow', 'Pink', 'Gray'] },
-  ];
-
-  const items: QuizItem[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const entry = colorPool[i % colorPool.length];
-    const optionsList = [entry.name, ...entry.distractors.slice(0, 3)].map((val) => ({
-      id: val.toLowerCase(),
-      label: val,
-      value: val,
-    }));
-
-    items.push({
-      id: `color-${i}-${Date.now()}`,
-      topicId: 'color-words',
-      gradeBand,
-      prompt: `What color is shown?`,
-      ttsPrompt: `What color is this swatch?`,
-      expectedAnswer: entry.name,
-      acceptableAnswers: [
-        entry.name,
-        entry.name.toLowerCase(),
-        entry.name.toUpperCase(),
-        `color ${entry.name.toLowerCase()}`,
-      ],
-      widget: {
-        type: 'colorswatch',
-        colorSwatchProps: {
-          colorName: entry.name.toLowerCase(),
-          hexColor: entry.hex,
         },
       },
       keypad: {
@@ -1214,6 +1241,7 @@ function generateClockItems(gradeBand: GradeBand, count: number): QuizItem[] {
       gradeBand,
       prompt: gradeBand === 'K-1' ? `What hour is shown on the clock?` : `What time is shown on the clock?`,
       ttsPrompt: gradeBand === 'K-1' ? `What hour is shown on the clock?` : `What time is shown on the clock?`,
+      ttsPromptZh: `钟表上显示的是几点?`,
       expectedAnswer: gradeBand === 'K-1' ? hourOnly : minutes === 0 ? hours : timeStr,
       acceptableAnswers: [hours, timeStr, hourOnly, `${hours} o'clock`],
       widget: {
@@ -1246,6 +1274,7 @@ function generateDotItems(gradeBand: GradeBand, count: number): QuizItem[] {
       gradeBand,
       prompt: `How many dots do you see?`,
       ttsPrompt: `How many dots are there?`,
+      ttsPromptZh: `这有多少个圆点?`,
       expectedAnswer: dotCount,
       acceptableAnswers: [dotCount, dotCount.toString()],
       widget: {
@@ -1281,6 +1310,7 @@ function generateSightWordItems(gradeBand: GradeBand, count: number): QuizItem[]
       gradeBand,
       prompt: `Read the sight word out loud:`,
       ttsPrompt: `Read this word: ${word.toLowerCase()}`,
+      ttsPromptZh: `朗读这个单词: ${word.toLowerCase()}`,
       expectedAnswer: word.toLowerCase(),
       acceptableAnswers: [word, word.toLowerCase(), word.toUpperCase()],
       widget: {

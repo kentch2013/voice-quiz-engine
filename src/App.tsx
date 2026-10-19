@@ -1,4 +1,5 @@
 import { useGameEngine } from './hooks/useGameEngine';
+import { getTTSPrompt } from './utils/quizGenerator';
 import { TopicLobby } from './components/TopicLobby';
 import { ProgressBar } from './components/ProgressBar';
 import { GameBoard } from './components/GameBoard';
@@ -105,7 +106,7 @@ export function App() {
                   onLanguageChange={setLanguage}
                   onOptionSelect={handleOptionSelect}
                   onReadAloud={() =>
-                    tts.speak(currentItem.ttsPrompt || currentItem.prompt)
+                    tts.speak(getTTSPrompt(currentItem, language, currentIndex))
                   }
                 />
 
