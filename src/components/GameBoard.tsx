@@ -8,6 +8,10 @@ import { SvgClock } from './widgets/SvgClock';
 import { SvgDotGrid } from './widgets/SvgDotGrid';
 import { FlashcardWidget } from './widgets/FlashcardWidget';
 import { ChoiceGrid } from './widgets/ChoiceGrid';
+import { SvgTenFrame } from './widgets/SvgTenFrame';
+import { SvgPlaceValueBlocks } from './widgets/SvgPlaceValueBlocks';
+import { SvgCoin } from './widgets/SvgCoin';
+import { SvgEquationCard } from './widgets/SvgEquationCard';
 
 interface GameBoardProps {
   item: QuizItem;
@@ -76,6 +80,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             {...item.widget.choiceProps}
             onSelectOption={onOptionSelect}
           />
+        ) : null;
+
+      case 'tenframe':
+        return item.widget.tenFrameProps ? (
+          <SvgTenFrame {...item.widget.tenFrameProps} />
+        ) : null;
+
+      case 'placevalue':
+        return item.widget.placeValueProps ? (
+          <SvgPlaceValueBlocks {...item.widget.placeValueProps} />
+        ) : null;
+
+      case 'coin':
+        return item.widget.coinProps ? (
+          <SvgCoin {...item.widget.coinProps} />
+        ) : null;
+
+      case 'equation':
+        return item.widget.equationProps ? (
+          <SvgEquationCard {...item.widget.equationProps} />
         ) : null;
 
       default:

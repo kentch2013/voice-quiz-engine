@@ -84,9 +84,12 @@ export function useGameEngine() {
       checkUtteranceMatchesAnswer(text, expected);
 
     const isAcceptableMatch =
-      activeItem.acceptableAnswers?.some((acc) =>
-        text.toLowerCase().includes(acc.toString().toLowerCase())
-      ) ?? false;
+      activeItem.acceptableAnswers?.some((acc) => {
+        if (typeof acc === 'number') {
+          return checkUtteranceMatchesAnswer(text, acc);
+        }
+        return text.toLowerCase().includes(acc.toString().toLowerCase());
+      }) ?? false;
 
     if (isStringMatch || isNumberMatch || isAcceptableMatch) {
       submitAnswerRef.current(expected, 'voice');
