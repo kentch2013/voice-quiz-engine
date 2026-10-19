@@ -11,8 +11,6 @@ export function App() {
     status,
     selectedTopicId,
     setSelectedTopicId,
-    selectedGradeBand,
-    setSelectedGradeBand,
     readAloudEnabled,
     setReadAloudEnabled,
     currentItem,
@@ -76,8 +74,6 @@ export function App() {
           <TopicLobby
             selectedTopicId={selectedTopicId}
             onSelectTopic={setSelectedTopicId}
-            selectedGradeBand={selectedGradeBand}
-            onSelectGradeBand={setSelectedGradeBand}
             readAloudEnabled={readAloudEnabled}
             onToggleReadAloud={() => setReadAloudEnabled(!readAloudEnabled)}
             onStartSession={startGame}
