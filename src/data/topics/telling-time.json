@@ -1,0 +1,92 @@
+[
+  {
+    "id": "clk-001",
+    "topicId": "telling-time",
+    "gradeBand": "1st",
+    "widget": {
+      "type": "svg-clock",
+      "params": { "hour": 4, "minute": 30 }
+    },
+    "narration": {
+      "spokenPrompt": "What time does this clock show?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["4:30", "four thirty", "four-thirty"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["4:00", "4:30", "5:00", "5:30"]
+    }
+  },
+  {
+    "id": "clk-002",
+    "topicId": "telling-time",
+    "gradeBand": "1st",
+    "widget": {
+      "type": "svg-clock",
+      "params": { "hour": 7, "minute": 0 }
+    },
+    "narration": {
+      "spokenPrompt": "What time is it on the clock?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["7:00", "seven o'clock", "seven"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["6:00", "7:00", "8:00", "7:30"]
+    }
+  },
+  {
+    "id": "clk-003",
+    "topicId": "telling-time",
+    "gradeBand": "1st",
+    "widget": {
+      "type": "svg-clock",
+      "params": { "hour": 10, "minute": 30 }
+    },
+    "narration": {
+      "spokenPrompt": "What time is it?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["10:30", "ten thirty", "ten-thirty"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["10:00", "10:30", "11:00", "9:30"]
+    }
+  },
+  {
+    "id": "clk-004",
+    "topicId": "telling-time",
+    "gradeBand": "1st",
+    "widget": {
+      "type": "svg-clock",
+      "params": { "hour": 2, "minute": 0 }
+    },
+    "narration": {
+      "spokenPrompt": "What hour does the clock show?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["2:00", "two o'clock", "two"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["1:00", "2:00", "3:00", "12:00"]
+    }
+  },
+  {
+    "id": "clk-005",
+    "topicId": "telling-time",
+    "gradeBand": "1st",
+    "widget": {
+      "type": "svg-clock",
+      "params": { "hour": 12, "minute": 30 }
+    },
+    "narration": {
+      "spokenPrompt": "What time does the clock say?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["12:30", "twelve thirty", "twelve-thirty"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["12:00", "12:30", "1:00", "1:30"]
+    }
+  }
+]

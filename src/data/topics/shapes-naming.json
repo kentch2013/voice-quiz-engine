@@ -1,0 +1,92 @@
+[
+  {
+    "id": "shp-001",
+    "topicId": "shapes-naming",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-shape",
+      "params": { "shapeType": "triangle" }
+    },
+    "narration": {
+      "spokenPrompt": "What shape is this?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["triangle"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Circle", "Triangle", "Square", "Hexagon"]
+    }
+  },
+  {
+    "id": "shp-002",
+    "topicId": "shapes-naming",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-shape",
+      "params": { "shapeType": "hexagon" }
+    },
+    "narration": {
+      "spokenPrompt": "What shape has six sides?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["hexagon"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Hexagon", "Pentagon", "Octagon", "Square"]
+    }
+  },
+  {
+    "id": "shp-003",
+    "topicId": "shapes-naming",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-shape",
+      "params": { "shapeType": "circle" }
+    },
+    "narration": {
+      "spokenPrompt": "What shape is round?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["circle"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Circle", "Square", "Triangle", "Oval"]
+    }
+  },
+  {
+    "id": "shp-004",
+    "topicId": "shapes-naming",
+    "gradeBand": "K",
+    "widget": {
+      "type": "svg-shape",
+      "params": { "shapeType": "cylinder" }
+    },
+    "narration": {
+      "spokenPrompt": "What 3D shape is this can-like shape?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["cylinder"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Cylinder", "Cube", "Cone", "Sphere"]
+    }
+  },
+  {
+    "id": "shp-005",
+    "topicId": "shapes-naming",
+    "gradeBand": "K",
+    "widget": {
+      "type": "svg-shape",
+      "params": { "shapeType": "cube" }
+    },
+    "narration": {
+      "spokenPrompt": "What 3D shape has six square faces?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["cube"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Cube", "Pyramid", "Sphere", "Cylinder"]
+    }
+  }
+]

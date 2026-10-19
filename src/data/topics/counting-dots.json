@@ -1,0 +1,87 @@
+[
+  {
+    "id": "cnt-001",
+    "topicId": "counting-dots",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-dot-grid",
+      "params": { "count": 7, "color": "#3B82F6", "arranged": true }
+    },
+    "narration": {
+      "spokenPrompt": "How many dots do you see?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["7", "seven"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "cnt-002",
+    "topicId": "counting-dots",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-dot-grid",
+      "params": { "count": 12, "color": "#10B981", "arranged": true }
+    },
+    "narration": {
+      "spokenPrompt": "Count the dots on the screen.",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["12", "twelve"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "cnt-003",
+    "topicId": "counting-dots",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-dot-grid",
+      "params": { "count": 5, "color": "#F59E0B", "arranged": true }
+    },
+    "narration": {
+      "spokenPrompt": "How many dots are there?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["5", "five"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "cnt-004",
+    "topicId": "counting-dots",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-dot-grid",
+      "params": { "count": 9, "color": "#8B5CF6", "arranged": true }
+    },
+    "narration": {
+      "spokenPrompt": "Count these dots.",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["9", "nine"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "cnt-005",
+    "topicId": "counting-dots",
+    "gradeBand": "Pre-K",
+    "widget": {
+      "type": "svg-dot-grid",
+      "params": { "count": 15, "color": "#EC4899", "arranged": true }
+    },
+    "narration": {
+      "spokenPrompt": "How many dots do you see?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["15", "fifteen"],
+    "keypad": {
+      "type": "numeric"
+    }
+  }
+]

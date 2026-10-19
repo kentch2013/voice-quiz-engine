@@ -1,0 +1,87 @@
+[
+  {
+    "id": "add-001",
+    "topicId": "addition-single",
+    "gradeBand": "K",
+    "widget": {
+      "type": "math-text",
+      "primaryText": "4 + 5 = ?"
+    },
+    "narration": {
+      "spokenPrompt": "What is four plus five?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["9", "nine"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "add-002",
+    "topicId": "addition-single",
+    "gradeBand": "K",
+    "widget": {
+      "type": "math-text",
+      "primaryText": "3 + 2 = ?"
+    },
+    "narration": {
+      "spokenPrompt": "What is three plus two?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["5", "five"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "add-003",
+    "topicId": "addition-single",
+    "gradeBand": "K",
+    "widget": {
+      "type": "math-text",
+      "primaryText": "6 + 4 = ?"
+    },
+    "narration": {
+      "spokenPrompt": "What is six plus four?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["10", "ten"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "add-004",
+    "topicId": "addition-single",
+    "gradeBand": "K",
+    "widget": {
+      "type": "math-text",
+      "primaryText": "2 + 7 = ?"
+    },
+    "narration": {
+      "spokenPrompt": "What is two plus seven?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["9", "nine"],
+    "keypad": {
+      "type": "numeric"
+    }
+  },
+  {
+    "id": "add-005",
+    "topicId": "addition-single",
+    "gradeBand": "K",
+    "widget": {
+      "type": "math-text",
+      "primaryText": "5 + 3 = ?"
+    },
+    "narration": {
+      "spokenPrompt": "What is five plus three?",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["8", "eight"],
+    "keypad": {
+      "type": "numeric"
+    }
+  }
+]

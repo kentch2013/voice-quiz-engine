@@ -1,0 +1,92 @@
+[
+  {
+    "id": "sgt-001",
+    "topicId": "sight-words",
+    "gradeBand": "K",
+    "widget": {
+      "type": "text-flashcard",
+      "primaryText": "said"
+    },
+    "narration": {
+      "spokenPrompt": "Read this word out loud:",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["said"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Said", "Sad", "Say", "Seed"]
+    }
+  },
+  {
+    "id": "sgt-002",
+    "topicId": "sight-words",
+    "gradeBand": "K",
+    "widget": {
+      "type": "text-flashcard",
+      "primaryText": "there"
+    },
+    "narration": {
+      "spokenPrompt": "Say this word aloud:",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["there", "their", "they're"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["There", "Their", "Three", "Then"]
+    }
+  },
+  {
+    "id": "sgt-003",
+    "topicId": "sight-words",
+    "gradeBand": "1st",
+    "widget": {
+      "type": "text-flashcard",
+      "primaryText": "because"
+    },
+    "narration": {
+      "spokenPrompt": "Read this word:",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["because"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Because", "Become", "Before", "Beside"]
+    }
+  },
+  {
+    "id": "sgt-004",
+    "topicId": "sight-words",
+    "gradeBand": "K",
+    "widget": {
+      "type": "text-flashcard",
+      "primaryText": "where"
+    },
+    "narration": {
+      "spokenPrompt": "Say this word:",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["where", "wear"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Where", "Were", "Here", "When"]
+    }
+  },
+  {
+    "id": "sgt-005",
+    "topicId": "sight-words",
+    "gradeBand": "K",
+    "widget": {
+      "type": "text-flashcard",
+      "primaryText": "come"
+    },
+    "narration": {
+      "spokenPrompt": "Read this word aloud:",
+      "autoPlay": true
+    },
+    "acceptedAnswers": ["come"],
+    "keypad": {
+      "type": "choice",
+      "choices": ["Come", "Came", "Cone", "Some"]
+    }
+  }
+]
