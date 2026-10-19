@@ -12,6 +12,7 @@ import { SvgTenFrame } from './widgets/SvgTenFrame';
 import { SvgPlaceValueBlocks } from './widgets/SvgPlaceValueBlocks';
 import { SvgCoin } from './widgets/SvgCoin';
 import { SvgEquationCard } from './widgets/SvgEquationCard';
+import { SvgColorSwatch } from './widgets/SvgColorSwatch';
 
 interface GameBoardProps {
   item: QuizItem;
@@ -100,6 +101,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       case 'equation':
         return item.widget.equationProps ? (
           <SvgEquationCard {...item.widget.equationProps} />
+        ) : null;
+
+      case 'colorswatch':
+        return item.widget.colorSwatchProps ? (
+          <SvgColorSwatch {...item.widget.colorSwatchProps} />
         ) : null;
 
       default:
