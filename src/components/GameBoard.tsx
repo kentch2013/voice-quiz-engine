@@ -19,6 +19,7 @@ interface GameBoardProps {
   timeLeft: number;
   showSilenceNudge: boolean;
   showExpiredAnswer?: boolean;
+  questionIndex?: number;
   transcript: string;
   interimTranscript: string;
   isListening: boolean;
@@ -36,6 +37,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   timeLeft,
   showSilenceNudge,
   showExpiredAnswer = false,
+  questionIndex,
   transcript,
   interimTranscript,
   isListening,
@@ -95,7 +97,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       case 'coin':
         return item.widget.coinProps ? (
-          <SvgCoin {...item.widget.coinProps} />
+          <SvgCoin
+            {...item.widget.coinProps}
+            questionIndex={questionIndex}
+            showExpiredAnswer={showExpiredAnswer}
+          />
         ) : null;
 
       case 'equation':

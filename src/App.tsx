@@ -96,6 +96,7 @@ export function App() {
                   timeLeft={questionTimeLeft}
                   showSilenceNudge={showSilenceNudge}
                   showExpiredAnswer={showExpiredAnswer}
+                  questionIndex={currentIndex}
                   transcript={voiceRecognition.transcript}
                   interimTranscript={voiceRecognition.interimTranscript}
                   isListening={voiceRecognition.isListening}

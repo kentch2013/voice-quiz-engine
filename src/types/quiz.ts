@@ -73,6 +73,10 @@ export interface CoinProps {
   coin?: CoinType;
   coins?: CoinType[];
   size?: number;
+  questionIndex?: number;
+  isFirstQuestion?: boolean;
+  isAnswerRevealed?: boolean;
+  showExpiredAnswer?: boolean;
 }
 
 export interface EquationProps {
