@@ -2,7 +2,17 @@ export type GradeBand = 'K-1' | '2-3' | '4-5';
 
 export type KeypadType = 'numeric' | 'alphabet' | 'choice' | 'none';
 
-export type WidgetType = 'shape' | 'clock' | 'dotgrid' | 'flashcard' | 'choice' | 'none';
+export type WidgetType =
+  | 'shape'
+  | 'clock'
+  | 'dotgrid'
+  | 'flashcard'
+  | 'choice'
+  | 'tenframe'
+  | 'placevalue'
+  | 'coin'
+  | 'equation'
+  | 'none';
 
 export interface QuizOption {
   id: string;
@@ -44,6 +54,32 @@ export interface ChoiceGridProps {
   onSelectOption?: (option: QuizOption) => void;
 }
 
+export interface TenFrameProps {
+  count: number;
+  total?: number;
+  color?: string;
+}
+
+export interface PlaceValueProps {
+  tens: number;
+  ones: number;
+}
+
+export type CoinType = 'penny' | 'nickel' | 'dime' | 'quarter';
+
+export interface CoinProps {
+  coin: CoinType;
+  size?: number;
+}
+
+export interface EquationProps {
+  operandA?: number | string;
+  operandB?: number | string;
+  operator?: '+' | '-' | '×' | '÷' | '=' | '?' | 'vs' | '___';
+  sequence?: (number | string)[];
+  displayFormat?: 'equation' | 'sequence' | 'comparison';
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -51,6 +87,10 @@ export interface WidgetConfig {
   dotGridProps?: DotGridProps;
   flashcardProps?: FlashcardProps;
   choiceProps?: ChoiceGridProps;
+  tenFrameProps?: TenFrameProps;
+  placeValueProps?: PlaceValueProps;
+  coinProps?: CoinProps;
+  equationProps?: EquationProps;
 }
 
 export interface KeypadConfig {
