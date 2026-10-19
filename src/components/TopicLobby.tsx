@@ -1,13 +1,11 @@
 import React from 'react';
-import { Volume2, VolumeX, Sparkles, BookOpen } from 'lucide-react';
-import type { GradeBand, Topic } from '../types/quiz';
+import { Volume2, VolumeX, Sparkles } from 'lucide-react';
+import type { Topic } from '../types/quiz';
 import { TOPICS } from '../utils/quizGenerator';
 
 interface TopicLobbyProps {
   selectedTopicId: string;
   onSelectTopic: (topicId: string) => void;
-  selectedGradeBand: GradeBand;
-  onSelectGradeBand: (gradeBand: GradeBand) => void;
   readAloudEnabled: boolean;
   onToggleReadAloud: () => void;
   onStartSession: () => void;
@@ -16,18 +14,10 @@ interface TopicLobbyProps {
 export const TopicLobby: React.FC<TopicLobbyProps> = ({
   selectedTopicId,
   onSelectTopic,
-  selectedGradeBand,
-  onSelectGradeBand,
   readAloudEnabled,
   onToggleReadAloud,
   onStartSession,
 }) => {
-  const gradeBands: GradeBand[] = ['K-1', '2-3', '4-5'];
-
-  const filteredTopics = TOPICS.filter((topic) =>
-    topic.gradeBands.includes(selectedGradeBand)
-  );
-
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 flex flex-col items-center">
       {/* Header Banner */}
@@ -39,36 +29,12 @@ export const TopicLobby: React.FC<TopicLobbyProps> = ({
           Pick a Quiz Topic
         </h1>
         <p className="text-slate-600 mt-2 text-sm sm:text-base max-w-md mx-auto">
-          Choose a subject, select your grade band, and turn on voice prompts for interactive practice!
+          Choose a subject and turn on voice prompts for interactive practice!
         </p>
       </div>
 
-      {/* Grade Band Filter & Read-Aloud Toggle Controls */}
-      <div className="w-full bg-white rounded-2xl p-4 sm:p-6 shadow-md border border-slate-200 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Grade Band Filter */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <BookOpen size={20} className="text-indigo-600 shrink-0" />
-          <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider shrink-0">
-            Grade Band:
-          </span>
-          <div className="flex gap-2 w-full sm:w-auto">
-            {gradeBands.map((grade) => (
-              <button
-                key={grade}
-                type="button"
-                onClick={() => onSelectGradeBand(grade)}
-                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                  selectedGradeBand === grade
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200'
-                }`}
-              >
-                {grade}
-              </button>
-            ))}
-          </div>
-        </div>
-
+      {/* Controls Container */}
+      <div className="w-full bg-white rounded-2xl p-4 sm:p-6 shadow-md border border-slate-200 mb-8 flex items-center justify-end">
         {/* Read-Aloud Prompt Toggle */}
         <button
           type="button"
@@ -88,7 +54,7 @@ export const TopicLobby: React.FC<TopicLobbyProps> = ({
 
       {/* Topic Selection Grid */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {filteredTopics.map((topic: Topic) => {
+        {TOPICS.map((topic: Topic) => {
           const isSelected = selectedTopicId === topic.id;
           return (
             <div
@@ -110,10 +76,7 @@ export const TopicLobby: React.FC<TopicLobbyProps> = ({
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-lg">
-                  Grade {selectedGradeBand}
-                </span>
+              <div className="mt-4 flex items-center justify-end">
                 <span
                   className={`text-xs font-extrabold ${
                     isSelected ? 'text-indigo-600' : 'text-slate-400'
