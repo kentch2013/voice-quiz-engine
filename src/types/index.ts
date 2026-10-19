@@ -1,3 +1,5 @@
+export * from './quiz';
+
 export interface MathProblem {
   id: string;
   operandA: number;
@@ -7,12 +9,12 @@ export interface MathProblem {
 
 export interface QuestionResult {
   questionId: string;
-  problem: string; // "6 x 7"
-  expectedAnswer: number;
-  userAnswer?: number;
+  problem: string; // "6 x 7" or prompt description
+  expectedAnswer: number | string;
+  userAnswer?: number | string;
   isCorrect: boolean;
   timeSpentSeconds: number;
-  inputMethod: 'voice' | 'keypad' | 'timeout';
+  inputMethod: 'voice' | 'keypad' | 'choice' | 'timeout';
   attemptsCount: number;
 }
 
@@ -24,6 +26,8 @@ export interface GameSession {
   correctCount: number;
   totalDurationSeconds: number;
   results: QuestionResult[];
+  topicId?: string;
+  gradeBand?: string;
 }
 
 export interface UserProfile {
