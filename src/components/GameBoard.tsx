@@ -1,11 +1,16 @@
 import React from 'react';
 import { Mic, MicOff, Volume2, Timer, MessageSquareHeart } from 'lucide-react';
-import type { MathProblem } from '../types';
+import type { QuizItem } from '../types/quiz';
 import type { VoiceLanguage } from '../hooks/useVoiceRecognition';
 import { LanguageToggle } from './LanguageToggle';
+import { SvgShape } from './widgets/SvgShape';
+import { SvgClock } from './widgets/SvgClock';
+import { SvgDotGrid } from './widgets/SvgDotGrid';
+import { FlashcardWidget } from './widgets/FlashcardWidget';
+import { ChoiceGrid } from './widgets/ChoiceGrid';
 
 interface GameBoardProps {
-  problem: MathProblem;
+  item: QuizItem;
   timeLeft: number;
   showSilenceNudge: boolean;
   showExpiredAnswer?: boolean;
@@ -17,10 +22,12 @@ interface GameBoardProps {
   keypadInput: string;
   language: VoiceLanguage;
   onLanguageChange: (lang: VoiceLanguage) => void;
+  onOptionSelect?: (option: { id: string; label: string; value: string }) => void;
+  onReadAloud?: () => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
-  problem,
+  item,
   timeLeft,
   showSilenceNudge,
   showExpiredAnswer = false,
@@ -32,8 +39,49 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   keypadInput,
   language,
   onLanguageChange,
+  onOptionSelect,
+  onReadAloud,
 }) => {
   const currentDisplayedTranscript = interimTranscript || transcript;
+
+  const renderWidget = () => {
+    if (!item.widget || item.widget.type === 'none') {
+      return null;
+    }
+
+    switch (item.widget.type) {
+      case 'shape':
+        return item.widget.shapeProps ? (
+          <SvgShape {...item.widget.shapeProps} />
+        ) : null;
+
+      case 'clock':
+        return item.widget.clockProps ? (
+          <SvgClock {...item.widget.clockProps} />
+        ) : null;
+
+      case 'dotgrid':
+        return item.widget.dotGridProps ? (
+          <SvgDotGrid {...item.widget.dotGridProps} />
+        ) : null;
+
+      case 'flashcard':
+        return item.widget.flashcardProps ? (
+          <FlashcardWidget {...item.widget.flashcardProps} />
+        ) : null;
+
+      case 'choice':
+        return item.widget.choiceProps ? (
+          <ChoiceGrid
+            {...item.widget.choiceProps}
+            onSelectOption={onOptionSelect}
+          />
+        ) : null;
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
@@ -94,32 +142,47 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
 
-      {/* Main Question Display (Font size >= 72px) */}
-      <div className="w-full bg-gradient-to-b from-white to-indigo-50/50 border-4 border-indigo-200 rounded-3xl p-8 sm:p-12 shadow-xl text-center mb-6 relative overflow-hidden">
-        <div className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-2">
-          Solve the problem
+      {/* Main Question Display */}
+      <div className="w-full bg-gradient-to-b from-white to-indigo-50/50 border-4 border-indigo-200 rounded-3xl p-6 sm:p-10 shadow-xl text-center mb-6 relative overflow-hidden flex flex-col items-center justify-center">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <span className="text-slate-400 text-xs sm:text-sm font-bold uppercase tracking-widest">
+            {item.prompt}
+          </span>
+          {onReadAloud && (
+            <button
+              type="button"
+              onClick={onReadAloud}
+              className="p-1 rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-colors cursor-pointer"
+              title="Read prompt aloud"
+            >
+              <Volume2 size={18} />
+            </button>
+          )}
         </div>
 
+        {/* Parametric / Flashcard Widget Area */}
+        <div className="w-full my-2 flex items-center justify-center min-h-[160px]">
+          {renderWidget()}
+        </div>
+
+        {/* Timeout Expired Answer or Default Prompt */}
         {showExpiredAnswer ? (
-          <div
-            className="font-black text-rose-600 tracking-tight select-none my-4 animate-bounce"
-            style={{ fontSize: '64px', lineHeight: '1.1' }}
-          >
-            {problem.operandA} × {problem.operandB} = {problem.expectedAnswer}
+          <div className="font-black text-rose-600 tracking-tight select-none my-2 animate-bounce text-3xl sm:text-4xl">
+            Answer: {item.expectedAnswer}
           </div>
-        ) : (
+        ) : item.widget?.type === 'none' ? (
           <div
             className="font-black text-indigo-900 tracking-tight select-none my-4"
             style={{ fontSize: '72px', lineHeight: '1.1' }}
           >
-            {problem.operandA} × {problem.operandB} = ?
+            {item.prompt}
           </div>
-        )}
+        ) : null}
 
-        {/* Typed Keypad Display or Voice Feedback */}
-        <div className="min-h-[50px] flex items-center justify-center">
+        {/* Keypad Display or Voice Feedback */}
+        <div className="min-h-[48px] flex items-center justify-center mt-2">
           {keypadInput ? (
-            <div className="text-3xl font-black text-purple-700 bg-purple-100 px-6 py-2 rounded-2xl border-2 border-purple-300 animate-fade-in">
+            <div className="text-2xl sm:text-3xl font-black text-purple-700 bg-purple-100 px-6 py-2 rounded-2xl border-2 border-purple-300 animate-fade-in">
               {keypadInput}
             </div>
           ) : currentDisplayedTranscript ? (
@@ -128,21 +191,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               <span>"{currentDisplayedTranscript}"</span>
             </div>
           ) : (
-            <div className="text-slate-400 text-sm italic">
+            <div className="text-slate-400 text-xs sm:text-sm italic">
               Say answer out loud or use the keypad below...
             </div>
           )}
         </div>
       </div>
 
-      {/* Silence Encouragement Banner (triggers after 10s of silence) */}
+      {/* Silence Encouragement Banner */}
       {showSilenceNudge && (
         <div className="w-full bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 mb-4 text-amber-900 flex items-center gap-3 shadow-md animate-bounce">
           <MessageSquareHeart size={28} className="text-amber-600 shrink-0" />
           <div className="text-left">
             <p className="font-bold text-sm sm:text-base">Take a guess!</p>
             <p className="text-xs sm:text-sm text-amber-800">
-              Say the answer out loud or tap the numbers on the keypad below!
+              Say the answer out loud or tap the keypad below!
             </p>
           </div>
         </div>

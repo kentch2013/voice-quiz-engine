@@ -1,14 +1,21 @@
 import { useGameEngine } from './hooks/useGameEngine';
-import { StartScreen } from './components/StartScreen';
+import { TopicLobby } from './components/TopicLobby';
 import { ProgressBar } from './components/ProgressBar';
 import { GameBoard } from './components/GameBoard';
-import { Keypad } from './components/Keypad';
+import { AdaptiveKeypad } from './components/keypad/AdaptiveKeypad';
 import { SummaryModal } from './components/SummaryModal';
+import type { QuizOption } from './types/quiz';
 
 export function App() {
   const {
     status,
-    currentProblem,
+    selectedTopicId,
+    setSelectedTopicId,
+    selectedGradeBand,
+    setSelectedGradeBand,
+    readAloudEnabled,
+    setReadAloudEnabled,
+    currentItem,
     currentIndex,
     totalQuestions,
     results,
@@ -22,13 +29,15 @@ export function App() {
     language,
     setLanguage,
     voiceRecognition,
+    tts,
     startGame,
     submitAnswer,
+    returnToLobby,
   } = useGameEngine();
 
-  const handleKeypadPress = (digit: string) => {
-    if (keypadInput.length < 3) {
-      setKeypadInput((prev) => prev + digit);
+  const handleKeypadKeyPress = (char: string) => {
+    if (keypadInput.length < 10) {
+      setKeypadInput((prev) => prev + char);
     }
   };
 
@@ -38,27 +47,40 @@ export function App() {
 
   const handleKeypadSubmit = () => {
     if (!keypadInput) return;
-    const num = parseInt(keypadInput, 10);
-    if (!isNaN(num)) {
-      submitAnswer(num, 'keypad');
-    }
+    submitAnswer(keypadInput, 'keypad');
+  };
+
+  const handleOptionSelect = (option: QuizOption) => {
+    submitAnswer(option.value, 'choice');
   };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col justify-between py-6">
-      <header className="px-4 text-center mb-2">
-        <h1 className="text-xl font-black text-indigo-900 tracking-tight flex items-center justify-center gap-2">
-          ⚡ Math Sprint PWA
+      <header className="px-4 text-center mb-2 flex items-center justify-between max-w-4xl mx-auto w-full">
+        <h1 className="text-xl font-black text-indigo-900 tracking-tight flex items-center gap-2">
+          🎙️ Universal Voice Quiz Engine
         </h1>
+        {status === 'playing' && (
+          <button
+            type="button"
+            onClick={returnToLobby}
+            className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white hover:bg-slate-200 rounded-xl border border-slate-300 transition-all cursor-pointer"
+          >
+            ← Lobby
+          </button>
+        )}
       </header>
 
       <main className="flex-1 flex flex-col justify-center max-w-3xl mx-auto w-full">
-        {status === 'idle' && (
-          <StartScreen
-            onStart={startGame}
-            isVoiceSupported={voiceRecognition.isSupported}
-            language={language}
-            onLanguageChange={setLanguage}
+        {status === 'lobby' && (
+          <TopicLobby
+            selectedTopicId={selectedTopicId}
+            onSelectTopic={setSelectedTopicId}
+            selectedGradeBand={selectedGradeBand}
+            onSelectGradeBand={setSelectedGradeBand}
+            readAloudEnabled={readAloudEnabled}
+            onToggleReadAloud={() => setReadAloudEnabled(!readAloudEnabled)}
+            onStartSession={startGame}
           />
         )}
 
@@ -70,10 +92,10 @@ export function App() {
               results={results}
             />
 
-            {currentProblem && status === 'playing' && (
+            {currentItem && status === 'playing' && (
               <>
                 <GameBoard
-                  problem={currentProblem}
+                  item={currentItem}
                   timeLeft={questionTimeLeft}
                   showSilenceNudge={showSilenceNudge}
                   showExpiredAnswer={showExpiredAnswer}
@@ -85,13 +107,20 @@ export function App() {
                   keypadInput={keypadInput}
                   language={language}
                   onLanguageChange={setLanguage}
+                  onOptionSelect={handleOptionSelect}
+                  onReadAloud={() =>
+                    tts.speak(currentItem.ttsPrompt || currentItem.prompt)
+                  }
                 />
 
-                <Keypad
-                  onNumberPress={handleKeypadPress}
+                <AdaptiveKeypad
+                  type={currentItem.keypad?.type || 'numeric'}
+                  options={currentItem.keypad?.options || []}
+                  value={keypadInput}
+                  onKeyPress={handleKeypadKeyPress}
                   onDelete={handleKeypadDelete}
                   onSubmit={handleKeypadSubmit}
-                  value={keypadInput}
+                  onOptionSelect={handleOptionSelect}
                 />
               </>
             )}
@@ -108,7 +137,7 @@ export function App() {
       </main>
 
       <footer className="text-center text-xs text-slate-400 mt-6">
-        Voice-Enabled Math Sprint • Designed for Kids
+        Universal Voice Quiz Engine • Kid-friendly Interactive Learning
       </footer>
     </div>
   );
