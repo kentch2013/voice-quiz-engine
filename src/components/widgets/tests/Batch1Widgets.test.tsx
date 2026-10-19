@@ -41,13 +41,28 @@ describe('Batch 1 Widget Components', () => {
       expect(collection).toBeDefined();
     });
 
-    it('renders Educational Scale Reference Tray with all four coins', () => {
-      render(<SvgCoin coin="dime" />);
+    it('renders Educational Scale Reference Tray on question 1 (questionIndex = 0)', () => {
+      render(<SvgCoin coin="dime" questionIndex={0} />);
       expect(screen.getByText(/Size Reference Tray/i)).toBeDefined();
       expect(screen.getByAltText(/Reference Dime/i)).toBeDefined();
       expect(screen.getByAltText(/Reference Penny/i)).toBeDefined();
       expect(screen.getByAltText(/Reference Nickel/i)).toBeDefined();
       expect(screen.getByAltText(/Reference Quarter/i)).toBeDefined();
+    });
+
+    it('omits Scale Reference Tray on questions 2-10 during active gameplay', () => {
+      render(<SvgCoin coin="dime" questionIndex={1} showExpiredAnswer={false} />);
+      expect(screen.queryByText(/Size Reference Tray/i)).toBeNull();
+    });
+
+    it('re-displays Scale Reference Tray when timer expires / showExpiredAnswer is true', () => {
+      render(<SvgCoin coin="dime" questionIndex={1} showExpiredAnswer={true} />);
+      expect(screen.getByText(/Size Reference Tray/i)).toBeDefined();
+    });
+
+    it('renders edge overlay visual differentiation elements for coins', () => {
+      const { getAllByTestId } = render(<SvgCoin coin="penny" />);
+      expect(getAllByTestId('penny-edge').length).toBeGreaterThan(0);
     });
   });
 
