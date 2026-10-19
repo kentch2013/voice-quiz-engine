@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateQuizItems, TOPICS } from '../quizGenerator';
+import { generateQuizItems, getTTSPrompt, TOPICS } from '../quizGenerator';
 
 describe('Batch 1: Math & Number Sense Modules Quiz Generators', () => {
   it('registers all 7 Batch 1 topics in TOPICS array', () => {
@@ -11,6 +11,19 @@ describe('Batch 1: Math & Number Sense Modules Quiz Generators', () => {
     expect(topicIds).toContain('greater-less-than');
     expect(topicIds).toContain('place-value-blocks');
     expect(topicIds).toContain('coin-identification');
+  });
+
+  describe('getTTSPrompt helper', () => {
+    it('returns full prompt on question 0 and concise prompt on question > 0 for EN and ZH', () => {
+      const items = generateQuizItems('single-digit-addition', 'K-1', 2);
+      const item = items[0];
+
+      expect(getTTSPrompt(item, 'en-US', 0)).toBe(`What is ${item.operandA} plus ${item.operandB}?`);
+      expect(getTTSPrompt(item, 'zh-CN', 0)).toBe(`${item.operandA} 加 ${item.operandB} 等于多少?`);
+
+      expect(getTTSPrompt(item, 'en-US', 1)).toBe(`${item.operandA} plus ${item.operandB}`);
+      expect(getTTSPrompt(item, 'zh-CN', 1)).toBe(`${item.operandA} 加 ${item.operandB}`);
+    });
   });
 
   describe('single-digit-addition generator', () => {
@@ -158,18 +171,22 @@ describe('Batch 1: Math & Number Sense Modules Quiz Generators', () => {
   });
 
   describe('coin-identification generator', () => {
-    it('generates coin identification and value items with choice options', () => {
+    it('generates coin counting items with expected cent total answers', () => {
       const items = generateQuizItems('coin-identification', 'K-1', 6);
       expect(items).toHaveLength(6);
 
       items.forEach((item) => {
         expect(item.topicId).toBe('coin-identification');
         expect(item.widget?.type).toBe('coin');
-        expect(item.keypad?.type).toBe('choice');
-        expect(item.keypad?.options).toHaveLength(4);
+        expect(typeof item.expectedAnswer).toBe('number');
+        expect(item.acceptableAnswers).toContain(item.expectedAnswer);
+        expect(item.keypad?.type === 'numeric' || item.keypad?.type === 'choice').toBe(true);
 
-        const validCoins = ['penny', 'nickel', 'dime', 'quarter'];
-        expect(validCoins).toContain(item.widget?.coinProps?.coin);
+        if (item.widget?.coinProps?.coin) {
+          expect(['penny', 'nickel', 'dime', 'quarter']).toContain(item.widget.coinProps.coin);
+        } else {
+          expect(item.widget?.coinProps?.coins?.length).toBeGreaterThan(0);
+        }
       });
     });
   });

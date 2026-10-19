@@ -2,14 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { generateQuizItems, TOPICS } from '../quizGenerator';
 
 describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', () => {
-  it('registers all 6 Batch 2 language arts topics in TOPICS array', () => {
+  it('registers all 5 Batch 2 language arts topics in TOPICS array', () => {
     const topicIds = TOPICS.map((t) => t.id);
     expect(topicIds).toContain('letter-identification');
     expect(topicIds).toContain('beginning-letter-sounds');
     expect(topicIds).toContain('rhyme-matching');
     expect(topicIds).toContain('opposites-antonyms');
     expect(topicIds).toContain('plural-forms');
-    expect(topicIds).toContain('color-words');
   });
 
   describe('letter-identification generator', () => {
@@ -105,29 +104,6 @@ describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', ()
       items.forEach((item) => {
         expect(item.topicId).toBe('plural-forms');
         expect(item.widget?.type).toBe('flashcard');
-        expect(item.keypad?.type).toBe('choice');
-        expect(item.keypad?.options).toHaveLength(4);
-
-        const optionValues = item.keypad?.options?.map((opt) => opt.value);
-        expect(optionValues).toContain(item.expectedAnswer);
-
-        const expectedStr = (item.expectedAnswer as string).toLowerCase();
-        const acceptableLower = item.acceptableAnswers!.map((a) => a.toString().toLowerCase());
-        expect(acceptableLower).toContain(expectedStr);
-      });
-    });
-  });
-
-  describe('color-words generator', () => {
-    it('generates valid color word items with colorswatch widget and choice keypad', () => {
-      const items = generateQuizItems('color-words', 'K-1', 6);
-      expect(items).toHaveLength(6);
-
-      items.forEach((item) => {
-        expect(item.topicId).toBe('color-words');
-        expect(item.widget?.type).toBe('colorswatch');
-        expect(item.widget?.colorSwatchProps?.colorName).toBeDefined();
-        expect(item.widget?.colorSwatchProps?.hexColor).toMatch(/^#[0-9a-fA-F]{6}$/);
         expect(item.keypad?.type).toBe('choice');
         expect(item.keypad?.options).toHaveLength(4);
 

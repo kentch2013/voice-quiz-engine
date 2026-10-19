@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { MathProblem, QuestionResult, GameSession } from '../types';
 import type { QuizItem, GradeBand } from '../types/quiz';
-import { generateQuizItems } from '../utils/quizGenerator';
+import { generateQuizItems, getTTSPrompt } from '../utils/quizGenerator';
 import { checkUtteranceMatchesAnswer } from '../utils/numberWords';
 import { playCorrectChime } from '../utils/audioSynthesizer';
 import { useVoiceRecognition, type VoiceLanguage } from './useVoiceRecognition';
@@ -119,10 +119,10 @@ export function useGameEngine() {
   // Auto read prompt when item changes and TTS read-aloud is enabled
   useEffect(() => {
     if (status === 'playing' && currentItem && readAloudEnabled) {
-      const textToRead = currentItem.ttsPrompt || currentItem.prompt;
+      const textToRead = getTTSPrompt(currentItem, language, currentIndex);
       tts.speak(textToRead);
     }
-  }, [currentIndex, status, readAloudEnabled, currentItem]);
+  }, [currentIndex, status, readAloudEnabled, currentItem, language]);
 
   // Submit an answer (voice, keypad, choice, or timeout)
   const submitAnswer = useCallback(

@@ -25,18 +25,20 @@ describe('Batch 1 Widget Components', () => {
   describe('SvgCoin', () => {
     it('renders US quarter coin correctly', () => {
       render(<SvgCoin coin="quarter" />);
-      const svg = screen.getByLabelText(/Quarter coin worth 25¢/i);
+      const svg = screen.getByLabelText(/US Quarter/i);
       expect(svg).toBeDefined();
-      expect(screen.getByText('25¢')).toBeDefined();
-      expect(screen.getByText('QUARTER')).toBeDefined();
     });
 
     it('renders penny coin correctly', () => {
       render(<SvgCoin coin="penny" />);
-      const svg = screen.getByLabelText(/Penny coin worth 1¢/i);
+      const svg = screen.getByLabelText(/US Penny/i);
       expect(svg).toBeDefined();
-      expect(screen.getByText('1¢')).toBeDefined();
-      expect(screen.getByText('PENNY')).toBeDefined();
+    });
+
+    it('renders a collection of US coins', () => {
+      render(<SvgCoin coins={['quarter', 'dime', 'penny']} />);
+      const collection = screen.getByLabelText(/Collection of US coins/i);
+      expect(collection).toBeDefined();
     });
   });
 

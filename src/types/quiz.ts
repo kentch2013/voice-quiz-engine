@@ -70,7 +70,8 @@ export interface PlaceValueProps {
 export type CoinType = 'penny' | 'nickel' | 'dime' | 'quarter';
 
 export interface CoinProps {
-  coin: CoinType;
+  coin?: CoinType;
+  coins?: CoinType[];
   size?: number;
 }
 
@@ -122,6 +123,9 @@ export interface QuizItem {
   gradeBand: GradeBand;
   prompt: string;
   ttsPrompt?: string;
+  ttsPromptConcise?: string;
+  ttsPromptZh?: string;
+  ttsPromptZhConcise?: string;
   expectedAnswer: string | number;
   acceptableAnswers?: (string | number)[];
   widget?: WidgetConfig;
