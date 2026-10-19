@@ -128,6 +128,27 @@ export const TOPICS: Topic[] = [
     icon: '🎨',
     gradeBands: ['K-1', '2-3'],
   },
+  {
+    id: 'even-or-odd',
+    title: '⚖️ Even or Odd',
+    description: 'Determine whether numbers are even or odd.',
+    icon: '⚖️',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'spatial-prepositions',
+    title: '🧭 Spatial Prepositions',
+    description: 'Identify spatial relationships like on, under, above, or in.',
+    icon: '🧭',
+    gradeBands: ['K-1', '2-3'],
+  },
+  {
+    id: 'odd-one-out',
+    title: '🔍 Odd One Out',
+    description: 'Find the item that does not belong in the group.',
+    icon: '🔍',
+    gradeBands: ['K-1', '2-3'],
+  },
 ];
 
 export function generateQuizItems(
@@ -170,6 +191,12 @@ export function generateQuizItems(
       return generatePluralFormsItems(gradeBand, count);
     case 'color-words':
       return generateColorWordsItems(gradeBand, count);
+    case 'even-or-odd':
+      return generateEvenOrOddItems(gradeBand, count);
+    case 'spatial-prepositions':
+      return generateSpatialPrepositionsItems(gradeBand, count);
+    case 'odd-one-out':
+      return generateOddOneOutItems(gradeBand, count);
     case 'math-sprint':
     default:
       return generateMathItems(gradeBand, count);
@@ -541,6 +568,280 @@ function generateShapeItems(gradeBand: GradeBand, count: number): QuizItem[] {
       keypad: {
         type: 'choice',
         options,
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateEvenOrOddItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const maxVal = gradeBand === 'K-1' ? 20 : 100;
+    const num = Math.floor(Math.random() * maxVal) + 1;
+    const isEven = num % 2 === 0;
+    const expected = isEven ? 'Even' : 'Odd';
+
+    const evenAcceptable = [
+      'even',
+      'Even',
+      'EVEN',
+      "it's even",
+      'its even',
+      'is even',
+      'an even number',
+      'eben',
+      'evan',
+      'ebin',
+    ];
+
+    const oddAcceptable = [
+      'odd',
+      'Odd',
+      'ODD',
+      "it's odd",
+      'its odd',
+      'is odd',
+      'an odd number',
+      'aud',
+      'awe',
+      'od',
+    ];
+
+    items.push({
+      id: `even-odd-${i}-${Date.now()}`,
+      topicId: 'even-or-odd',
+      gradeBand,
+      prompt: `Is ${num} Even or Odd?`,
+      ttsPrompt: `Is ${num} even or odd?`,
+      expectedAnswer: expected,
+      acceptableAnswers: isEven ? evenAcceptable : oddAcceptable,
+      operandA: num,
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: `${num}`,
+          subtext: `Even or Odd?`,
+          category: 'sight-word',
+          fontSize: '72px',
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: [
+          { id: 'even', label: 'Even', value: 'Even' },
+          { id: 'odd', label: 'Odd', value: 'Odd' },
+        ],
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateSpatialPrepositionsItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const scenes: {
+    subject: string;
+    target: string;
+    preposition: 'under' | 'on' | 'in' | 'above' | 'behind' | 'next to';
+    subjectEmoji: string;
+    targetEmoji: string;
+    acceptable: string[];
+    distractors: string[];
+  }[] = [
+    {
+      subject: 'cat',
+      target: 'table',
+      preposition: 'under',
+      subjectEmoji: '🐱',
+      targetEmoji: '🛋️',
+      acceptable: ['under', 'Under', 'UNDER', 'underneath', "it's under", 'its under', 'is under', 'under the table'],
+      distractors: ['On', 'In', 'Above'],
+    },
+    {
+      subject: 'dog',
+      target: 'rug',
+      preposition: 'on',
+      subjectEmoji: '🐶',
+      targetEmoji: '🟫',
+      acceptable: ['on', 'On', 'ON', 'onto', 'on top', "it's on", 'its on', 'is on', 'on the rug'],
+      distractors: ['Under', 'In', 'Behind'],
+    },
+    {
+      subject: 'bird',
+      target: 'tree',
+      preposition: 'in',
+      subjectEmoji: '🐦',
+      targetEmoji: '🌳',
+      acceptable: ['in', 'In', 'IN', 'inside', "it's in", 'its in', 'is in', 'in the tree'],
+      distractors: ['Under', 'On', 'Behind'],
+    },
+    {
+      subject: 'sun',
+      target: 'cloud',
+      preposition: 'above',
+      subjectEmoji: '☀️',
+      targetEmoji: '☁️',
+      acceptable: ['above', 'Above', 'ABOVE', 'over', "it's above", 'its above', 'is above', 'above the cloud'],
+      distractors: ['Under', 'In', 'On'],
+    },
+    {
+      subject: 'ball',
+      target: 'box',
+      preposition: 'behind',
+      subjectEmoji: '⚽',
+      targetEmoji: '📦',
+      acceptable: ['behind', 'Behind', 'BEHIND', 'in back of', "it's behind", 'its behind', 'is behind', 'behind the box'],
+      distractors: ['On', 'Under', 'Above'],
+    },
+    {
+      subject: 'book',
+      target: 'lamp',
+      preposition: 'next to',
+      subjectEmoji: '📚',
+      targetEmoji: '💡',
+      acceptable: ['next to', 'Next to', 'NEXT TO', 'beside', 'by', 'next', "it's next to", 'its next to', 'is next to'],
+      distractors: ['Under', 'In', 'Above'],
+    },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const scene = scenes[i % scenes.length];
+    const capitalPrep = scene.preposition.charAt(0).toUpperCase() + scene.preposition.slice(1);
+
+    const optionsList = [
+      { id: scene.preposition, label: capitalPrep, value: capitalPrep },
+      ...scene.distractors.map((d) => ({ id: d.toLowerCase(), label: d, value: d })),
+    ].slice(0, 4);
+
+    items.push({
+      id: `spatial-${i}-${Date.now()}`,
+      topicId: 'spatial-prepositions',
+      gradeBand,
+      prompt: `Where is the ${scene.subject}?`,
+      ttsPrompt: `Where is the ${scene.subject}? Is it ${scene.preposition} or something else?`,
+      expectedAnswer: capitalPrep,
+      acceptableAnswers: scene.acceptable,
+      widget: {
+        type: 'spatialscene',
+        spatialSceneProps: {
+          subject: scene.subject,
+          target: scene.target,
+          preposition: scene.preposition,
+          subjectEmoji: scene.subjectEmoji,
+          targetEmoji: scene.targetEmoji,
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: optionsList,
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateOddOneOutItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const problems: {
+    category: string;
+    items: string[];
+    odd: string;
+    choices: string[];
+    acceptable: string[];
+  }[] = [
+    {
+      category: 'Fruits',
+      items: ['Apple 🍎', 'Banana 🍌', 'Car 🚗', 'Grape 🍇'],
+      odd: 'Car',
+      choices: ['Apple', 'Banana', 'Car', 'Grape'],
+      acceptable: ['car', 'Car', 'CAR', 'the car', 'a car', 'automobile'],
+    },
+    {
+      category: 'Animals',
+      items: ['Cat 🐱', 'Dog 🐶', 'Pencil ✏️', 'Lion 🦁'],
+      odd: 'Pencil',
+      choices: ['Cat', 'Dog', 'Pencil', 'Lion'],
+      acceptable: ['pencil', 'Pencil', 'PENCIL', 'the pencil', 'a pencil'],
+    },
+    {
+      category: 'Vehicles',
+      items: ['Bus 🚌', 'Train 🚆', 'Cookie 🍪', 'Plane ✈️'],
+      odd: 'Cookie',
+      choices: ['Bus', 'Train', 'Cookie', 'Plane'],
+      acceptable: ['cookie', 'Cookie', 'COOKIE', 'the cookie', 'a cookie'],
+    },
+    {
+      category: 'Shapes',
+      items: ['Circle ⭕', 'Dog 🐶', 'Square ⬛', 'Triangle 🔺'],
+      odd: 'Dog',
+      choices: ['Circle', 'Dog', 'Square', 'Triangle'],
+      acceptable: ['dog', 'Dog', 'DOG', 'the dog', 'a dog', 'puppy'],
+    },
+    {
+      category: 'Clothes',
+      items: ['Shirt 👕', 'Banana 🍌', 'Pants 👖', 'Hat 🎩'],
+      odd: 'Banana',
+      choices: ['Shirt', 'Banana', 'Pants', 'Hat'],
+      acceptable: ['banana', 'Banana', 'BANANA', 'the banana', 'a banana'],
+    },
+    {
+      category: 'Colors',
+      items: ['Red 🔴', 'Blue 🔵', 'Chair 🪑', 'Green 🟢'],
+      odd: 'Chair',
+      choices: ['Red', 'Blue', 'Chair', 'Green'],
+      acceptable: ['chair', 'Chair', 'CHAIR', 'the chair', 'a chair'],
+    },
+    {
+      category: 'School Supplies',
+      items: ['Pencil ✏️', 'Pizza 🍕', 'Eraser 🧹', 'Ruler 📏'],
+      odd: 'Pizza',
+      choices: ['Pencil', 'Pizza', 'Eraser', 'Ruler'],
+      acceptable: ['pizza', 'Pizza', 'PIZZA', 'the pizza', 'a pizza'],
+    },
+    {
+      category: 'Toys',
+      items: ['Doll 🪆', 'Robot 🤖', 'Broccoli 🥦', 'Puzzle 🧩'],
+      odd: 'Broccoli',
+      choices: ['Doll', 'Robot', 'Broccoli', 'Puzzle'],
+      acceptable: ['broccoli', 'Broccoli', 'BROCCOLI', 'the broccoli'],
+    },
+  ];
+
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const entry = problems[i % problems.length];
+    const optionsList = entry.choices.map((choice) => ({
+      id: choice.toLowerCase(),
+      label: choice,
+      value: choice,
+    }));
+
+    items.push({
+      id: `odd-out-${i}-${Date.now()}`,
+      topicId: 'odd-one-out',
+      gradeBand,
+      prompt: `Which one does not belong?`,
+      ttsPrompt: `Which item does not belong in this group? ${entry.choices.join(', ')}`,
+      expectedAnswer: entry.odd,
+      acceptableAnswers: entry.acceptable,
+      widget: {
+        type: 'flashcard',
+        flashcardProps: {
+          text: entry.items.join('  '),
+          subtext: `Find the odd one out`,
+          category: 'phonics',
+          fontSize: '28px',
+        },
+      },
+      keypad: {
+        type: 'choice',
+        options: optionsList,
       },
     });
   }

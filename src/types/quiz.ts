@@ -13,6 +13,7 @@ export type WidgetType =
   | 'coin'
   | 'equation'
   | 'colorswatch'
+  | 'spatialscene'
   | 'none';
 
 export interface QuizOption {
@@ -87,6 +88,14 @@ export interface ColorSwatchProps {
   label?: string;
 }
 
+export interface SpatialSceneProps {
+  subject: string;
+  target: string;
+  preposition: 'under' | 'on' | 'in' | 'above' | 'behind' | 'next to';
+  subjectEmoji?: string;
+  targetEmoji?: string;
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -99,6 +108,7 @@ export interface WidgetConfig {
   coinProps?: CoinProps;
   equationProps?: EquationProps;
   colorSwatchProps?: ColorSwatchProps;
+  spatialSceneProps?: SpatialSceneProps;
 }
 
 export interface KeypadConfig {
