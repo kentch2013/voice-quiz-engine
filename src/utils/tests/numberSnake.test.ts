@@ -155,4 +155,22 @@ describe('Number Snake Game Unit Tests', () => {
       expect(sorted).toEqual([99, 52, 33, 11, 4]);
     });
   });
+
+  describe('Continuous Non-Stop Movement Behavior', () => {
+    it('calculates continuous step forward without stopping or returning stationary coordinates', () => {
+      const initialSnake = [
+        { x: 8, y: 7 },
+        { x: 8, y: 8 },
+        { x: 8, y: 9 },
+      ];
+      const nextHead = getWrappedCoordinate(initialSnake[0], 'UP', 16);
+      const updatedSnake = [nextHead, ...initialSnake.slice(0, -1)];
+
+      expect(nextHead).toEqual({ x: 8, y: 6 });
+      expect(updatedSnake).toHaveLength(3);
+      expect(updatedSnake[0]).toEqual({ x: 8, y: 6 });
+      expect(updatedSnake[1]).toEqual({ x: 8, y: 7 });
+      expect(updatedSnake[2]).toEqual({ x: 8, y: 8 });
+    });
+  });
 });

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { NumberSnakeGame } from '../NumberSnakeGame';
 
 // Mock audioSynthesizer to avoid AudioContext issues in JSDOM
@@ -14,23 +14,32 @@ vi.mock('canvas-confetti', () => ({
 }));
 
 describe('NumberSnakeGame Component', () => {
-  it('renders correctly with objective banner and next target number', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders rule banner and progress indicator without target number banner', () => {
     const testNumbers = [42, 18, 95, 7, 63, 29, 81, 36, 50, 14];
     render(<NumberSnakeGame numbers={testNumbers} mode="ascending" />);
 
-    // In ascending order, smallest number is 7
-    expect(screen.getByText(/Least to Greatest/i)).toBeDefined();
-    expect(screen.getByText('7')).toBeDefined();
-    expect(screen.getByText('🎯 NEXT TARGET NUMBER')).toBeDefined();
+    // Rule banner and progress indicator are shown
+    expect(screen.getByText(/Eat from Least to Greatest/i)).toBeDefined();
+    expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
+
+    // Target number banner box must NOT be displayed in DOM
+    expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
   });
 
-  it('displays descending objective banner and highest number first when mode="descending"', () => {
+  it('displays descending rule banner when mode="descending" without spoiler banner', () => {
     const testNumbers = [42, 18, 95, 7, 63, 29, 81, 36, 50, 14];
     render(<NumberSnakeGame numbers={testNumbers} mode="descending" />);
 
-    // In descending order, largest number is 95
-    expect(screen.getByText(/Greatest to Least/i)).toBeDefined();
-    expect(screen.getByText('95')).toBeDefined();
+    expect(screen.getByText(/Eat from Greatest to Least/i)).toBeDefined();
+    expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
   });
 
   it('renders touch D-pad buttons and handles click interactions', () => {
@@ -61,7 +70,8 @@ describe('NumberSnakeGame Component', () => {
       <NumberSnakeGame mode="ascending" transcript="up up up up up" interimTranscript="" />
     );
 
-    expect(screen.getByText('🎯 NEXT TARGET NUMBER')).toBeDefined();
+    expect(screen.getByText(/Eat from Least to Greatest/i)).toBeDefined();
+    expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
   });
 
   it('handles homophone directional commands in voice transcript', () => {
@@ -73,21 +83,20 @@ describe('NumberSnakeGame Component', () => {
       <NumberSnakeGame mode="ascending" transcript="opp done west write" interimTranscript="" />
     );
 
-    expect(screen.getByText('🎯 NEXT TARGET NUMBER')).toBeDefined();
+    expect(screen.getByText(/Eat from Least to Greatest/i)).toBeDefined();
+    expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
   });
 
-  it('triggers onEatTarget callback when target number is consumed', () => {
-    const onEatTarget = vi.fn();
-    const testNumbers = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  it('progresses continuous movement ticks automatically without freezing', () => {
+    render(<NumberSnakeGame mode="ascending" />);
 
-    render(
-      <NumberSnakeGame
-        numbers={testNumbers}
-        mode="ascending"
-        onEatTarget={onEatTarget}
-      />
-    );
+    // Advance timers across multiple game ticks (380ms per tick)
+    act(() => {
+      vi.advanceTimersByTime(380 * 5);
+    });
 
-    expect(screen.getByText('10')).toBeDefined();
+    // Verify component remains rendered and active
+    expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
+    expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
   });
 });
