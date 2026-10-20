@@ -34,6 +34,57 @@ describe('SvgShape Component', () => {
     expect(screen.getByText('triangle')).toBeDefined();
   });
 
+  it('renders rectangle shape', () => {
+    const { container } = render(<SvgShape shape="rectangle" />);
+
+    const rect = container.querySelector('rect');
+    expect(rect).not.toBeNull();
+    expect(screen.getByText('rectangle')).toBeDefined();
+  });
+
+  it('renders oval shape', () => {
+    const { container } = render(<SvgShape shape="oval" />);
+
+    const ellipse = container.querySelector('ellipse');
+    expect(ellipse).not.toBeNull();
+    expect(screen.getByText('oval')).toBeDefined();
+  });
+
+  it('renders diamond shape', () => {
+    const { container } = render(<SvgShape shape="diamond" />);
+
+    const polygon = container.querySelector('polygon');
+    expect(polygon).not.toBeNull();
+    expect(polygon?.getAttribute('points')?.split(' ').length).toBe(4);
+    expect(screen.getByText('diamond')).toBeDefined();
+  });
+
+  it('renders star shape with 10 polygon points', () => {
+    const { container } = render(<SvgShape shape="star" />);
+
+    const polygon = container.querySelector('polygon');
+    expect(polygon).not.toBeNull();
+    expect(polygon?.getAttribute('points')?.split(' ').length).toBe(10);
+    expect(screen.getByText('star')).toBeDefined();
+  });
+
+  it('renders heart shape with path', () => {
+    const { container } = render(<SvgShape shape="heart" />);
+
+    const path = container.querySelector('path');
+    expect(path).not.toBeNull();
+    expect(screen.getByText('heart')).toBeDefined();
+  });
+
+  it('renders pentagon shape with 5 polygon points', () => {
+    const { container } = render(<SvgShape shape="pentagon" />);
+
+    const polygon = container.querySelector('polygon');
+    expect(polygon).not.toBeNull();
+    expect(polygon?.getAttribute('points')?.split(' ').length).toBe(5);
+    expect(screen.getByText('pentagon')).toBeDefined();
+  });
+
   it('renders hexagon shape with 6 polygon points', () => {
     const { container } = render(<SvgShape shape="hexagon" size={180} />);
 
@@ -48,6 +99,23 @@ describe('SvgShape Component', () => {
     expect(screen.getByText('hexagon')).toBeDefined();
   });
 
+  it('renders octagon shape with 8 polygon points', () => {
+    const { container } = render(<SvgShape shape="octagon" />);
+
+    const polygon = container.querySelector('polygon');
+    expect(polygon).not.toBeNull();
+    expect(polygon?.getAttribute('points')?.split(' ').length).toBe(8);
+    expect(screen.getByText('octagon')).toBeDefined();
+  });
+
+  it('renders sphere shape', () => {
+    const { container } = render(<SvgShape shape="sphere" />);
+
+    const circle = container.querySelector('circle');
+    expect(circle).not.toBeNull();
+    expect(screen.getByText('sphere')).toBeDefined();
+  });
+
   it('renders cylinder shape with paths and ellipse', () => {
     const { container } = render(<SvgShape shape="cylinder" />);
 
@@ -58,6 +126,14 @@ describe('SvgShape Component', () => {
     expect(paths[0].getAttribute('d')).toContain('M');
     expect(ellipse).not.toBeNull();
     expect(screen.getByText('cylinder')).toBeDefined();
+  });
+
+  it('renders cone shape', () => {
+    const { container } = render(<SvgShape shape="cone" />);
+
+    const paths = container.querySelectorAll('path');
+    expect(paths.length).toBeGreaterThan(0);
+    expect(screen.getByText('cone')).toBeDefined();
   });
 
   it('renders cube shape with 3 face polygons', () => {

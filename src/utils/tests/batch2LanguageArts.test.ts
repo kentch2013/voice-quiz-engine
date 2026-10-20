@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateQuizItems, TOPICS } from '../quizGenerator';
+import { generateQuizItems, getTTSPrompt, TOPICS } from '../quizGenerator';
 
 describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', () => {
   it('registers all 5 Batch 2 language arts topics in TOPICS array', () => {
@@ -27,8 +27,30 @@ describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', ()
         expect(item.acceptableAnswers).toBeDefined();
         const acceptableLower = item.acceptableAnswers!.map((a) => a.toString().toLowerCase());
         expect(acceptableLower).toContain(expectedLetter);
+        expect(acceptableLower).toContain(`letter ${expectedLetter}`);
         expect(item.widget?.flashcardProps?.text).toBe(item.expectedAnswer);
         expect(item.widget?.flashcardProps?.category).toBe('letter');
+      });
+    });
+  });
+
+  describe('sight-words generator', () => {
+    it('generates sight word items with non-spoiling TTS prompts', () => {
+      const items = generateQuizItems('sight-words', 'K-1', 4);
+      expect(items).toHaveLength(4);
+
+      items.forEach((item, index) => {
+        expect(item.topicId).toBe('sight-words');
+        expect(item.widget?.type).toBe('flashcard');
+        expect(item.keypad?.type).toBe('alphabet');
+
+        const word = (item.expectedAnswer as string).toLowerCase();
+        expect(item.ttsPrompt).not.toContain(word);
+
+        expect(getTTSPrompt(item, 'en-US', 0)).toBe('Read this word out loud');
+        if (index > 0) {
+          expect(getTTSPrompt(item, 'en-US', index)).toBe('');
+        }
       });
     });
   });

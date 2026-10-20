@@ -13,6 +13,17 @@ export const SvgShape: React.FC<ShapeProps> = ({
   const renderArea = size - padding * 2;
   const radius = renderArea / 2;
 
+  const getRegularPolygonPoints = (sides: number, startAngleOffset = -Math.PI / 2): string => {
+    const points: string[] = [];
+    for (let i = 0; i < sides; i++) {
+      const angle = (2 * Math.PI / sides) * i + startAngleOffset;
+      const x = center + radius * Math.cos(angle);
+      const y = center + radius * Math.sin(angle);
+      points.push(`${x},${y}`);
+    }
+    return points.join(' ');
+  };
+
   const getShapeContent = () => {
     switch (shape) {
       case 'circle':
@@ -59,12 +70,65 @@ export const SvgShape: React.FC<ShapeProps> = ({
         );
       }
 
-      case 'hexagon': {
+      case 'rectangle': {
+        const rectWidth = renderArea;
+        const rectHeight = renderArea * 0.6;
+        const offsetX = padding;
+        const offsetY = center - rectHeight / 2;
+        return (
+          <rect
+            x={offsetX}
+            y={offsetY}
+            width={rectWidth}
+            height={rectHeight}
+            rx="8"
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+          />
+        );
+      }
+
+      case 'oval': {
+        return (
+          <ellipse
+            cx={center}
+            cy={center}
+            rx={radius}
+            ry={radius * 0.6}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+          />
+        );
+      }
+
+      case 'diamond':
+      case 'rhombus': {
+        const pTop = `${center},${padding}`;
+        const pRight = `${size - padding},${center}`;
+        const pBottom = `${center},${size - padding}`;
+        const pLeft = `${padding},${center}`;
+        return (
+          <polygon
+            points={`${pTop} ${pRight} ${pBottom} ${pLeft}`}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+            strokeLinejoin="round"
+          />
+        );
+      }
+
+      case 'star': {
         const points: string[] = [];
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i - Math.PI / 6;
-          const x = center + radius * Math.cos(angle);
-          const y = center + radius * Math.sin(angle);
+        const outerR = radius;
+        const innerR = radius * 0.4;
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 === 0 ? outerR : innerR;
+          const angle = (Math.PI / 5) * i - Math.PI / 2;
+          const x = center + r * Math.cos(angle);
+          const y = center + r * Math.sin(angle);
           points.push(`${x},${y}`);
         }
         return (
@@ -78,8 +142,87 @@ export const SvgShape: React.FC<ShapeProps> = ({
         );
       }
 
+      case 'heart': {
+        const d = `M ${center} ${center + radius * 0.75} C ${center - radius * 1.3} ${center - radius * 0.2}, ${center - radius * 0.7} ${center - radius * 0.9}, ${center} ${center - radius * 0.3} C ${center + radius * 0.7} ${center - radius * 0.9}, ${center + radius * 1.3} ${center - radius * 0.2}, ${center} ${center + radius * 0.75} Z`;
+        return (
+          <path
+            d={d}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+            strokeLinejoin="round"
+          />
+        );
+      }
+
+      case 'pentagon':
+        return (
+          <polygon
+            points={getRegularPolygonPoints(5)}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+            strokeLinejoin="round"
+          />
+        );
+
+      case 'hexagon':
+        return (
+          <polygon
+            points={getRegularPolygonPoints(6, -Math.PI / 6)}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+            strokeLinejoin="round"
+          />
+        );
+
+      case 'octagon':
+        return (
+          <polygon
+            points={getRegularPolygonPoints(8, -Math.PI / 8)}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth="4"
+            strokeLinejoin="round"
+          />
+        );
+
+      case 'sphere': {
+        const rx = radius * 0.9;
+        return (
+          <g>
+            <circle
+              cx={center}
+              cy={center}
+              r={rx}
+              fill={color}
+              stroke={strokeColor}
+              strokeWidth="4"
+            />
+            <ellipse
+              cx={center}
+              cy={center}
+              rx={rx}
+              ry={rx * 0.3}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth="2"
+              strokeDasharray="4 4"
+            />
+            <ellipse
+              cx={center - rx * 0.25}
+              cy={center - rx * 0.25}
+              rx={rx * 0.4}
+              ry={rx * 0.25}
+              fill="#ffffff"
+              opacity="0.35"
+            />
+          </g>
+        );
+      }
+
       case 'cylinder': {
-        // Isometric / 3D cylinder representation
         const rx = radius * 0.85;
         const ry = radius * 0.3;
         const topY = padding + ry + 10;
@@ -117,8 +260,35 @@ export const SvgShape: React.FC<ShapeProps> = ({
         );
       }
 
+      case 'cone': {
+        const rx = radius * 0.85;
+        const ry = radius * 0.25;
+        const apexY = padding + 10;
+        const baseY = size - padding - ry - 10;
+
+        return (
+          <g>
+            {/* Body */}
+            <path
+              d={`M ${center - rx} ${baseY} L ${center} ${apexY} L ${center + rx} ${baseY} A ${rx} ${ry} 0 0 1 ${center - rx} ${baseY} Z`}
+              fill={color}
+              stroke={strokeColor}
+              strokeWidth="4"
+              strokeLinejoin="round"
+            />
+            {/* Dashed back ellipse curve */}
+            <path
+              d={`M ${center - rx} ${baseY} A ${rx} ${ry} 0 0 1 ${center + rx} ${baseY}`}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth="2"
+              strokeDasharray="4 4"
+            />
+          </g>
+        );
+      }
+
       case 'cube': {
-        // Isometric 3D Cube
         const r = radius * 0.8;
         const topPoint = [center, center - r];
         const rightTop = [center + r * 0.866, center - r * 0.5];
@@ -173,9 +343,7 @@ export const SvgShape: React.FC<ShapeProps> = ({
       >
         {getShapeContent()}
       </svg>
-      <span className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-        {shape}
-      </span>
+      <span className="sr-only">{shape}</span>
     </div>
   );
 };

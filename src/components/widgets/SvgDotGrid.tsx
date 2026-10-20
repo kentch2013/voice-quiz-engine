@@ -60,9 +60,6 @@ export const SvgDotGrid: React.FC<DotGridProps> = ({
             />
           ))}
         </svg>
-        <span className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Count the dots ({safeCount})
-        </span>
       </div>
     );
   }
@@ -86,9 +83,6 @@ export const SvgDotGrid: React.FC<DotGridProps> = ({
           />
         ))}
       </div>
-      <span className="mt-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-        Dot Array ({safeCount})
-      </span>
     </div>
   );
 };

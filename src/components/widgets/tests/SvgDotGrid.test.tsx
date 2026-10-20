@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { SvgDotGrid } from '../SvgDotGrid';
 
 describe('SvgDotGrid Component', () => {
-  it('renders exactly N circle counters in grid layout', () => {
+  it('renders exactly N circle counters in grid layout without spoiler text', () => {
     const count = 7;
     const { container } = render(<SvgDotGrid count={count} layout="grid" />);
 
@@ -11,10 +11,11 @@ describe('SvgDotGrid Component', () => {
     const counterElements = container.querySelectorAll('.rounded-full');
     expect(counterElements.length).toBe(count);
 
-    expect(screen.getByText(`Dot Array (${count})`)).toBeDefined();
+    // Verify spoiler label is removed
+    expect(screen.queryByText(`Dot Array (${count})`)).toBeNull();
   });
 
-  it('renders exactly N circle counters in scattered layout', () => {
+  it('renders exactly N circle counters in scattered layout without spoiler text', () => {
     const count = 5;
     const { container } = render(<SvgDotGrid count={count} layout="scattered" />);
 
@@ -22,7 +23,8 @@ describe('SvgDotGrid Component', () => {
     const circles = container.querySelectorAll('circle');
     expect(circles.length).toBe(count);
 
-    expect(screen.getByText(`Count the dots (${count})`)).toBeDefined();
+    // Verify spoiler label is removed
+    expect(screen.queryByText(`Count the dots (${count})`)).toBeNull();
   });
 
   it('clamps count between 1 and 20', () => {
