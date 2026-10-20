@@ -5,7 +5,7 @@ import type { NumberSnakeProps } from '../../types/quiz';
 import { playCorrectChime, playWrongSound } from '../../utils/audioSynthesizer';
 
 const GRID_SIZE = 16;
-const TICK_MS = 380;
+const TICK_MS = 750;
 
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
@@ -429,7 +429,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
       </div>
 
       {/* 16x16 Snake Grid Board */}
-      <div className="relative bg-slate-900 rounded-2xl p-2.5 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full aspect-square max-w-[420px]">
+      <div className="relative bg-slate-900 rounded-2xl p-2.5 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full aspect-square max-w-[560px]">
         <div
           className="w-full h-full grid grid-cols-16 grid-rows-16 gap-[1px] bg-slate-800/60 rounded-xl overflow-hidden"
           style={{
@@ -466,7 +466,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
 
                 {/* Number Food Tile */}
                 {gridNum && (
-                  <div className="absolute inset-0.5 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md transition-transform duration-200 bg-indigo-600 text-white opacity-90">
+                  <div className="absolute inset-0.5 rounded-lg flex items-center justify-center text-xs sm:text-sm md:text-base font-black shadow-md transition-transform duration-200 bg-indigo-600 text-white opacity-90">
                     {gridNum.value}
                   </div>
                 )}
