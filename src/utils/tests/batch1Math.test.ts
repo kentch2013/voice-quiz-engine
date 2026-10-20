@@ -123,25 +123,19 @@ describe('Batch 1: Math & Number Sense Modules Quiz Generators', () => {
   });
 
   describe('greater-less-than generator', () => {
-    it('generates comparison items with choice keypads', () => {
+    it('generates Number Snake game items with 10 random numbers and ordering objectives', () => {
       const items = generateQuizItems('greater-less-than', 'K-1', 5);
       expect(items).toHaveLength(5);
 
       items.forEach((item) => {
         expect(item.topicId).toBe('greater-less-than');
-        expect(item.widget?.type).toBe('equation');
-        expect(item.widget?.equationProps?.displayFormat).toBe('comparison');
-        expect(item.keypad?.type).toBe('choice');
-        expect(item.keypad?.options).toHaveLength(2);
+        expect(item.widget?.type).toBe('numbersnake');
+        expect(item.keypad?.type).toBe('none');
 
-        const numA = item.widget?.equationProps?.operandA as number;
-        const numB = item.widget?.equationProps?.operandB as number;
-
-        if (item.prompt.includes('bigger')) {
-          expect(item.expectedAnswer).toBe(Math.max(numA, numB));
-        } else {
-          expect(item.expectedAnswer).toBe(Math.min(numA, numB));
-        }
+        const snakeProps = item.widget?.numberSnakeProps;
+        expect(snakeProps).toBeDefined();
+        expect(snakeProps?.numbers).toHaveLength(10);
+        expect(['ascending', 'descending']).toContain(snakeProps?.mode);
       });
     });
   });

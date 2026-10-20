@@ -39,9 +39,9 @@ export const TOPICS: Topic[] = [
   },
   {
     id: 'greater-less-than',
-    title: '⚖️ Greater or Less Than',
-    description: 'Compare two numbers and identify which is bigger or smaller.',
-    icon: '⚖️',
+    title: '🐍 Number Snake Game',
+    description: 'Guide the snake to eat numbers in order from least to greatest or greatest to least!',
+    icon: '🐍',
     gradeBands: ['K-1', '2-3'],
   },
   {
@@ -386,44 +386,39 @@ function generateSkipCountingItems(gradeBand: GradeBand, count: number): QuizIte
 function generateGreaterLessThanItems(gradeBand: GradeBand, count: number): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
-    const maxVal = gradeBand === 'K-1' ? 30 : 99;
-    const minVal = gradeBand === 'K-1' ? 1 : 10;
-
-    let numA = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
-    let numB = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
-    while (numB === numA) {
-      numB = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+    const numbersSet = new Set<number>();
+    while (numbersSet.size < 10) {
+      numbersSet.add(Math.floor(Math.random() * 100) + 1);
     }
+    const numbers = Array.from(numbersSet);
 
-    const isBigger = i % 2 === 0;
-    const expected = isBigger ? Math.max(numA, numB) : Math.min(numA, numB);
+    const isAscending = i % 2 === 0;
+    const mode = isAscending ? 'ascending' : 'descending';
+
+    const prompt = isAscending
+      ? 'Eat from Least to Greatest!'
+      : 'Eat from Greatest to Least!';
 
     items.push({
       id: `glt-${i}-${Date.now()}`,
       topicId: 'greater-less-than',
       gradeBand,
-      prompt: `Which is ${isBigger ? 'bigger' : 'smaller'}? ${numA} or ${numB}`,
-      ttsPrompt: `Which number is ${isBigger ? 'bigger' : 'smaller'}: ${numA} or ${numB}?`,
-      ttsPromptConcise: `${isBigger ? 'Bigger' : 'Smaller'}: ${numA} or ${numB}`,
-      ttsPromptZh: `${numA} 和 ${numB}，哪个更${isBigger ? '大' : '小'}?`,
-      ttsPromptZhConcise: `${numA} 和 ${numB} 哪个更${isBigger ? '大' : '小'}`,
-      expectedAnswer: expected,
-      acceptableAnswers: [expected, expected.toString()],
+      prompt,
+      ttsPrompt: prompt,
+      ttsPromptConcise: prompt,
+      ttsPromptZh: isAscending ? '从最小到最大吃数字！' : '从最大到最小吃数字！',
+      ttsPromptZhConcise: isAscending ? '从最小到最大吃数字' : '从最大到最小吃数字',
+      expectedAnswer: 'completed',
+      acceptableAnswers: ['completed', 'done', 'win', '10'],
       widget: {
-        type: 'equation',
-        equationProps: {
-          operandA: numA,
-          operandB: numB,
-          operator: 'vs',
-          displayFormat: 'comparison',
+        type: 'numbersnake',
+        numberSnakeProps: {
+          numbers,
+          mode,
         },
       },
       keypad: {
-        type: 'choice',
-        options: [
-          { id: numA.toString(), label: numA.toString(), value: numA.toString() },
-          { id: numB.toString(), label: numB.toString(), value: numB.toString() },
-        ],
+        type: 'none',
       },
     });
   }

@@ -14,6 +14,7 @@ export type WidgetType =
   | 'equation'
   | 'colorswatch'
   | 'spatialscene'
+  | 'numbersnake'
   | 'none';
 
 export interface QuizOption {
@@ -117,6 +118,12 @@ export interface SpatialSceneProps {
   targetEmoji?: string;
 }
 
+export interface NumberSnakeProps {
+  numbers?: number[];
+  mode?: 'ascending' | 'descending';
+  onComplete?: () => void;
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -130,6 +137,7 @@ export interface WidgetConfig {
   equationProps?: EquationProps;
   colorSwatchProps?: ColorSwatchProps;
   spatialSceneProps?: SpatialSceneProps;
+  numberSnakeProps?: NumberSnakeProps;
 }
 
 export interface KeypadConfig {

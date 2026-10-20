@@ -22,7 +22,7 @@ describe('TopicLobby Batch 1 Modules', () => {
     expect(screen.getByText('➖ Single-Digit Subtraction')).toBeDefined();
     expect(screen.getByText('🔟 Number Bonds to 10')).toBeDefined();
     expect(screen.getByText('🔢 Skip Counting')).toBeDefined();
-    expect(screen.getByText('⚖️ Greater or Less Than')).toBeDefined();
+    expect(screen.getByText('🐍 Number Snake Game')).toBeDefined();
     expect(screen.getByText('🧊 Place Value Blocks')).toBeDefined();
     expect(screen.getByText('🪙 Coin Identification')).toBeDefined();
   });
