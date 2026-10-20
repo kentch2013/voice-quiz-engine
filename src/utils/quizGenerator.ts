@@ -4,7 +4,7 @@ import { generateMathProblems } from './mathGenerator';
 export const TOPICS: Topic[] = [
   {
     id: 'math-sprint',
-    title: '⚡ Math Sprint',
+    title: '⚡ Multiplication Facts',
     description: 'Fast-paced mental math & multiplication speed runs.',
     icon: '⚡',
     gradeBands: ['K-1', '2-3', '4-5'],
@@ -152,7 +152,7 @@ export function getTTSPrompt(
   const isConcise = index > 0;
 
   if (language === 'zh-CN') {
-    if (isConcise && item.ttsPromptZhConcise) {
+    if (isConcise && item.ttsPromptZhConcise !== undefined) {
       return item.ttsPromptZhConcise;
     }
     if (item.ttsPromptZh) {
@@ -161,7 +161,7 @@ export function getTTSPrompt(
     return item.prompt;
   }
 
-  if (isConcise && item.ttsPromptConcise) {
+  if (isConcise && item.ttsPromptConcise !== undefined) {
     return item.ttsPromptConcise;
   }
   return item.ttsPrompt || item.prompt;
@@ -467,8 +467,6 @@ function generateCoinIdentificationItems(gradeBand: GradeBand, count: number): Q
   const items: QuizItem[] = [];
 
   const coinValues: Record<CoinType, number> = { penny: 1, nickel: 5, dime: 10, quarter: 25 };
-  const coinLabels: Record<CoinType, string> = { penny: 'Penny', nickel: 'Nickel', dime: 'Dime', quarter: 'Quarter' };
-  const coinLabelsZh: Record<CoinType, string> = { penny: '一美分', nickel: '五美分', dime: '十美分', quarter: '二十五美分' };
 
   const clusters: CoinType[][] = [
     ['quarter', 'quarter', 'dime', 'penny', 'penny', 'penny'],
@@ -489,8 +487,6 @@ function generateCoinIdentificationItems(gradeBand: GradeBand, count: number): Q
     if (isSingle) {
       const coin = singleCoins[i % singleCoins.length];
       const val = coinValues[coin];
-      const label = coinLabels[coin];
-      const labelZh = coinLabelsZh[coin];
 
       const distractors = [val + 5, Math.max(1, val - 5), val + 10, 1].filter((d) => d !== val).slice(0, 3);
       const options = [val, ...distractors]
@@ -501,11 +497,11 @@ function generateCoinIdentificationItems(gradeBand: GradeBand, count: number): Q
         id: `coin-${i}-${Date.now()}`,
         topicId: 'coin-identification',
         gradeBand,
-        prompt: `How many cents is a ${label} worth?`,
-        ttsPrompt: `How many cents is a ${label} worth?`,
-        ttsPromptConcise: `${label} value in cents?`,
-        ttsPromptZh: `一枚${labelZh}硬币值多少分?`,
-        ttsPromptZhConcise: `${labelZh}硬币值多少分?`,
+        prompt: `How much money is this?`,
+        ttsPrompt: `How much money is this?`,
+        ttsPromptConcise: ``,
+        ttsPromptZh: `这是多少钱？`,
+        ttsPromptZhConcise: ``,
         expectedAnswer: val,
         acceptableAnswers: [
           val,
@@ -545,11 +541,11 @@ function generateCoinIdentificationItems(gradeBand: GradeBand, count: number): Q
         id: `coin-${i}-${Date.now()}`,
         topicId: 'coin-identification',
         gradeBand,
-        prompt: `Count the coins: total value in cents?`,
-        ttsPrompt: `What is the total value of these coins in cents?`,
-        ttsPromptConcise: `Count total cents`,
-        ttsPromptZh: `这些硬币的总价值是多少分?`,
-        ttsPromptZhConcise: `计算硬币总面值`,
+        prompt: `How much money is this?`,
+        ttsPrompt: `How much money is this?`,
+        ttsPromptConcise: ``,
+        ttsPromptZh: `这是多少钱？`,
+        ttsPromptZhConcise: ``,
         expectedAnswer: totalCents,
         acceptableAnswers: [
           totalCents,
@@ -577,53 +573,61 @@ function generateCoinIdentificationItems(gradeBand: GradeBand, count: number): Q
 }
 
 function generateShapeItems(gradeBand: GradeBand, count: number): QuizItem[] {
-  const shapesK1: { name: string; tts: string; ttsZh: string }[] = [
-    { name: 'circle', tts: 'What shape is this circle?', ttsZh: '这是什么形状?' },
-    { name: 'square', tts: 'What shape is this square?', ttsZh: '这是什么形状?' },
-    { name: 'triangle', tts: 'What shape is this triangle?', ttsZh: '这是什么形状?' },
-  ];
-  const shapesUpper: { name: string; tts: string; ttsZh: string }[] = [
-    { name: 'hexagon', tts: 'What shape is this six-sided shape?', ttsZh: '这是什么形状?' },
-    { name: 'cylinder', tts: 'What 3D shape is this cylinder?', ttsZh: '这是什么立体形状?' },
-    { name: 'cube', tts: 'What 3D shape is this cube?', ttsZh: '这是什么立体形状?' },
+  const shapeDefs: { name: string; acceptable: string[] }[] = [
+    { name: 'circle', acceptable: ['circle', 'Circle'] },
+    { name: 'square', acceptable: ['square', 'Square'] },
+    { name: 'triangle', acceptable: ['triangle', 'Triangle'] },
+    { name: 'rectangle', acceptable: ['rectangle', 'Rectangle'] },
+    { name: 'oval', acceptable: ['oval', 'Oval', 'ellipse', 'Ellipse'] },
+    { name: 'diamond', acceptable: ['diamond', 'Diamond', 'rhombus', 'Rhombus'] },
+    { name: 'star', acceptable: ['star', 'Star'] },
+    { name: 'heart', acceptable: ['heart', 'Heart'] },
+    { name: 'pentagon', acceptable: ['pentagon', 'Pentagon'] },
+    { name: 'hexagon', acceptable: ['hexagon', 'Hexagon'] },
+    { name: 'octagon', acceptable: ['octagon', 'Octagon'] },
+    { name: 'cube', acceptable: ['cube', 'Cube'] },
+    { name: 'sphere', acceptable: ['sphere', 'Sphere', 'ball'] },
+    { name: 'cylinder', acceptable: ['cylinder', 'Cylinder', 'can'] },
+    { name: 'cone', acceptable: ['cone', 'Cone'] },
   ];
 
-  const pool = gradeBand === 'K-1' ? shapesK1 : [...shapesK1, ...shapesUpper];
   const items: QuizItem[] = [];
 
   for (let i = 0; i < count; i++) {
-    const item = pool[i % pool.length];
-    const shapeName = item.name;
-    const options = [
-      { id: 'circle', label: 'Circle', value: 'circle' },
-      { id: 'square', label: 'Square', value: 'square' },
-      { id: 'triangle', label: 'Triangle', value: 'triangle' },
-      { id: 'hexagon', label: 'Hexagon', value: 'hexagon' },
-      { id: 'cylinder', label: 'Cylinder', value: 'cylinder' },
-      { id: 'cube', label: 'Cube', value: 'cube' },
-    ].filter((opt) => opt.id === shapeName || Math.random() > 0.3).slice(0, 4);
+    const targetDef = shapeDefs[i % shapeDefs.length];
+    const shapeName = targetDef.name;
 
-    if (!options.some((opt) => opt.id === shapeName)) {
-      options[0] = {
-        id: shapeName,
-        label: shapeName.charAt(0).toUpperCase() + shapeName.slice(1),
-        value: shapeName,
-      };
-    }
+    const distractors = shapeDefs
+      .filter((s) => s.name !== shapeName)
+      .map((s) => s.name);
+
+    // Pick 3 distractors
+    const chosenDistractors = distractors
+      .slice()
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+
+    const options = [shapeName, ...chosenDistractors]
+      .sort(() => Math.random() - 0.5)
+      .map((name) => ({
+        id: name,
+        label: name.charAt(0).toUpperCase() + name.slice(1),
+        value: name,
+      }));
 
     items.push({
       id: `shape-${i}-${Date.now()}`,
       topicId: 'shapes-geometry',
       gradeBand,
-      prompt: `Identify the shape:`,
-      ttsPrompt: item.tts,
-      ttsPromptZh: item.ttsZh,
+      prompt: `What shape is this?`,
+      ttsPrompt: `What shape is this?`,
+      ttsPromptConcise: ``,
+      ttsPromptZh: `这是什么形状？`,
+      ttsPromptZhConcise: ``,
       expectedAnswer: shapeName,
-      acceptableAnswers: [
-        shapeName,
-        shapeName.toLowerCase(),
-        shapeName.toUpperCase(),
-      ],
+      acceptableAnswers: Array.from(
+        new Set([shapeName, shapeName.toLowerCase(), shapeName.toUpperCase(), ...targetDef.acceptable])
+      ),
       widget: {
         type: 'shape',
         shapeProps: {
@@ -926,32 +930,32 @@ function generateOddOneOutItems(gradeBand: GradeBand, count: number): QuizItem[]
 }
 
 const LETTER_SPOKEN_NAMES: Record<string, string[]> = {
-  a: ['a', 'ay', 'letter a'],
-  b: ['b', 'bee', 'letter b'],
-  c: ['c', 'cee', 'see', 'letter c'],
-  d: ['d', 'dee', 'letter d'],
-  e: ['e', 'ee', 'letter e'],
-  f: ['f', 'ef', 'eff', 'letter f'],
-  g: ['g', 'gee', 'letter g'],
-  h: ['h', 'aitch', 'heitch', 'letter h'],
-  i: ['i', 'eye', 'letter i'],
-  j: ['j', 'jay', 'letter j'],
-  k: ['k', 'kay', 'letter k'],
-  l: ['l', 'el', 'ell', 'letter l'],
-  m: ['m', 'em', 'letter m'],
-  n: ['n', 'en', 'letter n'],
-  o: ['o', 'oh', 'letter o'],
-  p: ['p', 'pee', 'letter p'],
-  q: ['q', 'cue', 'letter q'],
-  r: ['r', 'ar', 'are', 'letter r'],
-  s: ['s', 'ess', 'letter s'],
-  t: ['t', 'tee', 'tea', 'letter t'],
-  u: ['u', 'you', 'letter u'],
-  v: ['v', 'vee', 'letter v'],
-  w: ['w', 'double u', 'double-u', 'letter w'],
-  x: ['x', 'ex', 'letter x'],
-  y: ['y', 'why', 'letter y'],
-  z: ['z', 'zee', 'zed', 'letter z'],
+  a: ['a', 'ay', 'eh', 'aye', 'hey', 'apple', 'a as in apple', 'letter a'],
+  b: ['b', 'bee', 'be', 'boy', 'b as in boy', 'letter b'],
+  c: ['c', 'cee', 'see', 'sea', 'si', 'cat', 'c as in cat', 'letter c'],
+  d: ['d', 'dee', 'the', 'dog', 'd as in dog', 'letter d'],
+  e: ['e', 'ee', 'he', 'egg', 'e as in egg', 'letter e'],
+  f: ['f', 'ef', 'eff', 'fish', 'f as in fish', 'letter f'],
+  g: ['g', 'gee', 'ji', 'goat', 'g as in goat', 'letter g'],
+  h: ['h', 'aitch', 'heitch', 'eight', 'hat', 'h as in hat', 'letter h'],
+  i: ['i', 'eye', 'hi', 'high', 'igloo', 'i as in igloo', 'letter i'],
+  j: ['j', 'jay', 'jayne', 'jam', 'j as in jam', 'letter j'],
+  k: ['k', 'kay', 'okay', 'kite', 'k as in kite', 'letter k'],
+  l: ['l', 'el', 'ell', 'lion', 'l as in lion', 'letter l'],
+  m: ['m', 'em', 'am', 'monkey', 'm as in monkey', 'letter m'],
+  n: ['n', 'en', 'and', 'nest', 'n as in nest', 'letter n'],
+  o: ['o', 'oh', 'owe', 'octopus', 'o as in octopus', 'letter o'],
+  p: ['p', 'pee', 'pea', 'pig', 'p as in pig', 'letter p'],
+  q: ['q', 'cue', 'queue', 'queen', 'q as in queen', 'letter q'],
+  r: ['r', 'ar', 'are', 'our', 'rabbit', 'r as in rabbit', 'letter r'],
+  s: ['s', 'ess', 'yes', 'sun', 's as in sun', 'letter s'],
+  t: ['t', 'tee', 'tea', 'to', 'too', 'two', 'tiger', 't as in tiger', 'letter t'],
+  u: ['u', 'you', 'ewe', 'yew', 'umbrella', 'u as in umbrella', 'letter u'],
+  v: ['v', 'vee', 'we', 'van', 'v as in van', 'letter v'],
+  w: ['w', 'double u', 'double-u', 'doubleyou', 'window', 'w as in window', 'letter w'],
+  x: ['x', 'ex', 'axe', 'x-ray', 'xray', 'x as in x-ray', 'letter x'],
+  y: ['y', 'why', 'wire', 'yoyo', 'yo-yo', 'y as in yoyo', 'letter y'],
+  z: ['z', 'zee', 'zed', 'zebra', 'z as in zebra', 'letter z'],
 };
 
 function getLetterAcceptableAnswers(letterChar: string): string[] {
@@ -981,7 +985,9 @@ function generateLetterIdentificationItems(gradeBand: GradeBand, count: number):
       gradeBand,
       prompt: `What ${isUpper ? 'uppercase' : 'lowercase'} letter is this?`,
       ttsPrompt: `What letter is this?`,
+      ttsPromptConcise: ``,
       ttsPromptZh: `这是什么字母?`,
+      ttsPromptZhConcise: ``,
       expectedAnswer: letter,
       acceptableAnswers: getLetterAcceptableAnswers(letter),
       widget: {
@@ -1219,6 +1225,21 @@ function generatePluralFormsItems(gradeBand: GradeBand, count: number): QuizItem
   return items;
 }
 
+const HOUR_WORDS: Record<number, string> = {
+  1: 'one',
+  2: 'two',
+  3: 'three',
+  4: 'four',
+  5: 'five',
+  6: 'six',
+  7: 'seven',
+  8: 'eight',
+  9: 'nine',
+  10: 'ten',
+  11: 'eleven',
+  12: 'twelve',
+};
+
 function generateClockItems(gradeBand: GradeBand, count: number): QuizItem[] {
   const items: QuizItem[] = [];
 
@@ -1226,24 +1247,66 @@ function generateClockItems(gradeBand: GradeBand, count: number): QuizItem[] {
     let hours = Math.floor(Math.random() * 12) + 1;
     let minutes = 0;
 
-    if (gradeBand === '2-3') {
-      minutes = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
-    } else if (gradeBand === '4-5') {
-      minutes = Math.floor(Math.random() * 12) * 5;
+    if (gradeBand === 'K-1') {
+      minutes = i % 2 === 0 ? 0 : 30;
+    } else if (gradeBand === '2-3') {
+      minutes = [0, 15, 30, 45][i % 4];
+    } else {
+      minutes = (i * 5) % 60;
     }
 
     const timeStr = `${hours}:${minutes.toString().padStart(2, '0')}`;
-    const hourOnly = hours.toString();
+    const hourWord = HOUR_WORDS[hours] || hours.toString();
+    const nextHour = hours % 12 + 1;
+    const nextHourWord = HOUR_WORDS[nextHour] || nextHour.toString();
+
+    const acceptableSet = new Set<string | number>([
+      timeStr,
+      hours,
+      hours.toString(),
+    ]);
+
+    if (minutes === 0) {
+      acceptableSet.add(`${hours}:00`);
+      acceptableSet.add(hourWord);
+      acceptableSet.add(`${hours} o'clock`);
+      acceptableSet.add(`${hours} oclock`);
+      acceptableSet.add(`${hourWord} o'clock`);
+      acceptableSet.add(`${hourWord} oclock`);
+    } else if (minutes === 30) {
+      acceptableSet.add(`${hours}:30`);
+      acceptableSet.add(`${hours} 30`);
+      acceptableSet.add(`${hours}-30`);
+      acceptableSet.add(`${hourWord} thirty`);
+      acceptableSet.add(`${hourWord}-thirty`);
+      acceptableSet.add(`half past ${hours}`);
+      acceptableSet.add(`half past ${hourWord}`);
+    } else if (minutes === 15) {
+      acceptableSet.add(`${hours}:15`);
+      acceptableSet.add(`${hours} 15`);
+      acceptableSet.add(`${hourWord} fifteen`);
+      acceptableSet.add(`quarter past ${hours}`);
+      acceptableSet.add(`quarter past ${hourWord}`);
+    } else if (minutes === 45) {
+      acceptableSet.add(`${hours}:45`);
+      acceptableSet.add(`${hours} 45`);
+      acceptableSet.add(`${hourWord} forty five`);
+      acceptableSet.add(`${hourWord} forty-five`);
+      acceptableSet.add(`quarter to ${nextHour}`);
+      acceptableSet.add(`quarter to ${nextHourWord}`);
+    }
 
     items.push({
       id: `clock-${i}-${Date.now()}`,
       topicId: 'clock-reading',
       gradeBand,
-      prompt: gradeBand === 'K-1' ? `What hour is shown on the clock?` : `What time is shown on the clock?`,
-      ttsPrompt: gradeBand === 'K-1' ? `What hour is shown on the clock?` : `What time is shown on the clock?`,
+      prompt: `What time is shown on the clock?`,
+      ttsPrompt: `What time is shown on the clock?`,
+      ttsPromptConcise: ``,
       ttsPromptZh: `钟表上显示的是几点?`,
-      expectedAnswer: gradeBand === 'K-1' ? hourOnly : minutes === 0 ? hours : timeStr,
-      acceptableAnswers: [hours, timeStr, hourOnly, `${hours} o'clock`],
+      ttsPromptZhConcise: ``,
+      expectedAnswer: timeStr,
+      acceptableAnswers: Array.from(acceptableSet),
       widget: {
         type: 'clock',
         clockProps: {
@@ -1309,8 +1372,10 @@ function generateSightWordItems(gradeBand: GradeBand, count: number): QuizItem[]
       topicId: 'sight-words',
       gradeBand,
       prompt: `Read the sight word out loud:`,
-      ttsPrompt: `Read this word: ${word.toLowerCase()}`,
-      ttsPromptZh: `朗读这个单词: ${word.toLowerCase()}`,
+      ttsPrompt: `Read this word out loud`,
+      ttsPromptConcise: ``,
+      ttsPromptZh: `请朗读这个单词`,
+      ttsPromptZhConcise: ``,
       expectedAnswer: word.toLowerCase(),
       acceptableAnswers: [word, word.toLowerCase(), word.toUpperCase()],
       widget: {

@@ -22,7 +22,23 @@ export interface QuizOption {
   value: string;
 }
 
-export type ShapeType = 'circle' | 'square' | 'triangle' | 'hexagon' | 'cylinder' | 'cube';
+export type ShapeType =
+  | 'circle'
+  | 'square'
+  | 'triangle'
+  | 'rectangle'
+  | 'oval'
+  | 'diamond'
+  | 'rhombus'
+  | 'star'
+  | 'heart'
+  | 'pentagon'
+  | 'hexagon'
+  | 'octagon'
+  | 'cube'
+  | 'sphere'
+  | 'cylinder'
+  | 'cone';
 
 export interface ShapeProps {
   shape: ShapeType;

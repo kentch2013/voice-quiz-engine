@@ -171,22 +171,78 @@ describe('Batch 1: Math & Number Sense Modules Quiz Generators', () => {
   });
 
   describe('coin-identification generator', () => {
-    it('generates coin counting items with expected cent total answers', () => {
+    it('generates coin counting items with expected cent total answers and proper prompts', () => {
       const items = generateQuizItems('coin-identification', 'K-1', 6);
       expect(items).toHaveLength(6);
 
-      items.forEach((item) => {
+      items.forEach((item, index) => {
         expect(item.topicId).toBe('coin-identification');
         expect(item.widget?.type).toBe('coin');
         expect(typeof item.expectedAnswer).toBe('number');
         expect(item.acceptableAnswers).toContain(item.expectedAnswer);
-        expect(item.keypad?.type === 'numeric' || item.keypad?.type === 'choice').toBe(true);
+        expect(item.prompt).toBe('How much money is this?');
+
+        expect(getTTSPrompt(item, 'en-US', 0)).toBe('How much money is this?');
+        expect(getTTSPrompt(item, 'zh-CN', 0)).toBe('这是多少钱？');
+
+        if (index > 0) {
+          expect(getTTSPrompt(item, 'en-US', index)).toBe('');
+          expect(getTTSPrompt(item, 'zh-CN', index)).toBe('');
+        }
 
         if (item.widget?.coinProps?.coin) {
           expect(['penny', 'nickel', 'dime', 'quarter']).toContain(item.widget.coinProps.coin);
         } else {
           expect(item.widget?.coinProps?.coins?.length).toBeGreaterThan(0);
         }
+      });
+    });
+  });
+
+  describe('clock-reading generator', () => {
+    it('generates clock items testing whole and half hours with colloquial acceptable answers', () => {
+      const items = generateQuizItems('clock-reading', 'K-1', 4);
+      expect(items).toHaveLength(4);
+
+      items.forEach((item, index) => {
+        expect(item.topicId).toBe('clock-reading');
+        expect(item.widget?.type).toBe('clock');
+        expect(item.prompt).toBe('What time is shown on the clock?');
+
+        expect(getTTSPrompt(item, 'en-US', 0)).toBe('What time is shown on the clock?');
+        if (index > 0) {
+          expect(getTTSPrompt(item, 'en-US', index)).toBe('');
+        }
+
+        const mins = item.widget?.clockProps?.minutes;
+        expect([0, 30]).toContain(mins);
+
+        if (mins === 30) {
+          const accLower = item.acceptableAnswers!.map((a) => a.toString().toLowerCase());
+          expect(accLower.some((a) => a.includes('half past'))).toBe(true);
+        }
+      });
+    });
+  });
+
+  describe('shapes-geometry generator', () => {
+    it('generates shape items without answer spoilers in prompt', () => {
+      const items = generateQuizItems('shapes-geometry', 'K-1', 6);
+      expect(items).toHaveLength(6);
+
+      items.forEach((item, index) => {
+        expect(item.topicId).toBe('shapes-geometry');
+        expect(item.widget?.type).toBe('shape');
+        expect(item.prompt).toBe('What shape is this?');
+
+        expect(getTTSPrompt(item, 'en-US', 0)).toBe('What shape is this?');
+        if (index > 0) {
+          expect(getTTSPrompt(item, 'en-US', index)).toBe('');
+        }
+
+        expect(item.ttsPrompt).not.toContain('circle');
+        expect(item.ttsPrompt).not.toContain('square');
+        expect(item.ttsPrompt).not.toContain('triangle');
       });
     });
   });
