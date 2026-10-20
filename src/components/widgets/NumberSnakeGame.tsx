@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Trophy, Sparkles } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import type { NumberSnakeProps } from '../../types/quiz';
 import { playCorrectChime, playWrongSound } from '../../utils/audioSynthesizer';
 
@@ -171,16 +171,15 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
   onEatTarget,
   onComplete,
 }) => {
-  // Sort numbers according to objective mode
-  const sortedTargets = useRef<number[]>([]);
-  useEffect(() => {
+  // Sort numbers according to objective mode synchronously
+  const sortedTargets = useMemo(() => {
     const copy = [...numbers];
     if (mode === 'ascending') {
       copy.sort((a, b) => a - b);
     } else {
       copy.sort((a, b) => b - a);
     }
-    sortedTargets.current = copy;
+    return copy;
   }, [numbers, mode]);
 
   const initialSnake: Position[] = [
@@ -202,6 +201,25 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
   const currentDirectionRef = useRef<Direction>('UP');
   const snakeRef = useRef<Position[]>(snake);
   const processedCommandCountRef = useRef<number>(0);
+
+  // Refs for continuous timer access without tearing down interval
+  const sortedTargetsRef = useRef<number[]>(sortedTargets);
+  sortedTargetsRef.current = sortedTargets;
+
+  const gridNumbersRef = useRef<GridNumber[]>(gridNumbers);
+  gridNumbersRef.current = gridNumbers;
+
+  const currentTargetIndexRef = useRef<number>(currentTargetIndex);
+  currentTargetIndexRef.current = currentTargetIndex;
+
+  const isCompletedRef = useRef<boolean>(isCompleted);
+  isCompletedRef.current = isCompleted;
+
+  const onEatTargetRef = useRef(onEatTarget);
+  onEatTargetRef.current = onEatTarget;
+
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   currentDirectionRef.current = direction;
   snakeRef.current = snake;
@@ -303,36 +321,40 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [changeDirection]);
 
-  // Game tick interval
+  // Continuous game tick interval
   useEffect(() => {
     if (isCompleted) return;
 
     const timer = setInterval(() => {
+      if (isCompletedRef.current) return;
+
       setSnake((prevSnake) => {
         const head = prevSnake[0];
         const currentDir = pendingDirectionRef.current;
         const nextHead = getWrappedCoordinate(head, currentDir);
 
         // 1. Check self collision
-        // Check if nextHead overlaps with body (excluding tail unless growing)
         const isSelfCollision = prevSnake
           .slice(0, -1)
           .some((segment) => segment.x === nextHead.x && segment.y === nextHead.y);
 
         if (isSelfCollision) {
           playWrongSound();
-          setLastBounceMessage('Oops! Soft bounce off yourself!');
+          setLastBounceMessage('Oops! Self collision!');
           setTimeout(() => setLastBounceMessage(null), 1200);
-          return prevSnake; // Cancel move (soft bounce)
+          // Continuous non-stop movement: continue forward without freezing in place
+          return [nextHead, ...prevSnake.slice(0, -1)];
         }
 
         // 2. Check number collision
-        const hitNumber = gridNumbers.find(
+        const currentGridNumbers = gridNumbersRef.current;
+        const hitNumber = currentGridNumbers.find(
           (gn) => gn.x === nextHead.x && gn.y === nextHead.y
         );
 
         if (hitNumber) {
-          const currentTargetVal = sortedTargets.current[currentTargetIndex];
+          const targetIndex = currentTargetIndexRef.current;
+          const currentTargetVal = sortedTargetsRef.current[targetIndex];
 
           if (hitNumber.value === currentTargetVal) {
             // Correct Target Eaten!
@@ -342,14 +364,14 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
             // Remove eaten number from grid
             setGridNumbers((prev) => prev.filter((gn) => gn.id !== hitNumber.id));
 
-            const nextIndex = currentTargetIndex + 1;
+            const nextIndex = targetIndex + 1;
             setCurrentTargetIndex(nextIndex);
 
-            if (onEatTarget) {
-              onEatTarget(hitNumber.value, nextIndex);
+            if (onEatTargetRef.current) {
+              onEatTargetRef.current(hitNumber.value, nextIndex);
             }
 
-            if (nextIndex >= sortedTargets.current.length) {
+            if (nextIndex >= sortedTargetsRef.current.length) {
               // Game Completed!
               setIsCompleted(true);
               try {
@@ -361,8 +383,9 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
               } catch {
                 // Ignore if confetti unavailable in test env
               }
-              if (onComplete) {
-                setTimeout(() => onComplete(), 1500);
+              if (onCompleteRef.current) {
+                const cb = onCompleteRef.current;
+                setTimeout(() => cb(), 1500);
               }
             }
 
@@ -370,46 +393,32 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
           } else {
             // Wrong Number (Out of Order)!
             playWrongSound();
-            setLastBounceMessage(
-              `Wrong order! Target is ${sortedTargets.current[currentTargetIndex]}`
-            );
+            setLastBounceMessage('Wrong order! Keep going!');
             setTimeout(() => setLastBounceMessage(null), 1500);
-            return prevSnake; // Soft bounce back, number remains on board
+            // Continuous non-stop movement: pass through cell without eating number or stopping
+            return [nextHead, ...prevSnake.slice(0, -1)];
           }
         }
 
         // 3. Normal Empty Cell Movement
-        const newSnake = [nextHead, ...prevSnake.slice(0, -1)];
-        return newSnake;
+        return [nextHead, ...prevSnake.slice(0, -1)];
       });
     }, TICK_MS);
 
     return () => clearInterval(timer);
-  }, [gridNumbers, currentTargetIndex, isCompleted, onComplete]);
-
-  const currentTargetNumber = sortedTargets.current[currentTargetIndex];
+  }, [isCompleted]);
 
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col items-center select-none">
-      {/* Objective & Target Header Display */}
+      {/* Objective & Progress Header Display */}
       <div className="w-full bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 rounded-2xl p-4 text-white shadow-lg mb-4 text-center border-2 border-indigo-200">
-        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap mb-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
           <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
-            {mode === 'ascending' ? '📈 Least to Greatest' : '📉 Greatest to Least'}
+            {mode === 'ascending' ? '📈 Eat from Least to Greatest' : '📉 Eat from Greatest to Least'}
           </div>
           <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl font-black text-xs sm:text-sm">
-            Eaten: {currentTargetIndex} / {sortedTargets.current.length}
+            Eaten: {currentTargetIndex} / {sortedTargets.length}
           </div>
-        </div>
-
-        {/* Next Target Banner */}
-        <div className="flex flex-col items-center justify-center bg-white/95 rounded-xl py-2 px-4 text-slate-900 shadow-inner">
-          <span className="text-xs font-black uppercase text-indigo-600 tracking-widest">
-            🎯 NEXT TARGET NUMBER
-          </span>
-          <span className="text-4xl font-black tracking-tight text-indigo-900 animate-pulse">
-            {currentTargetNumber ?? <Trophy size={36} className="text-amber-500 inline" />}
-          </span>
         </div>
 
         {lastBounceMessage && (
@@ -437,7 +446,6 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
             const isHead = snake[0]?.x === x && snake[0]?.y === y;
             const isBody = !isHead && snake.some((s) => s.x === x && s.y === y);
             const gridNum = gridNumbers.find((gn) => gn.x === x && gn.y === y);
-            const isTarget = gridNum && gridNum.value === currentTargetNumber;
 
             let bgClass = 'bg-slate-900/40';
             if (isHead) {
@@ -458,13 +466,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
 
                 {/* Number Food Tile */}
                 {gridNum && (
-                  <div
-                    className={`absolute inset-0.5 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md transition-transform duration-200 ${
-                      isTarget
-                        ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-200 animate-bounce z-10'
-                        : 'bg-indigo-600 text-white opacity-90'
-                    }`}
-                  >
+                  <div className="absolute inset-0.5 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md transition-transform duration-200 bg-indigo-600 text-white opacity-90">
                     {gridNum.value}
                   </div>
                 )}
