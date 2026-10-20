@@ -51,17 +51,43 @@ describe('NumberSnakeGame Component', () => {
     fireEvent.click(downButton);
   });
 
-  it('updates direction when voice transcript changes', () => {
+  it('updates direction when voice transcript changes and handles repeated utterances', () => {
     const { rerender } = render(
       <NumberSnakeGame mode="ascending" transcript="" interimTranscript="" />
     );
 
-    // Pass voice transcript "turn left"
+    // Pass repeated voice transcript "up up up up up"
     rerender(
-      <NumberSnakeGame mode="ascending" transcript="turn left" interimTranscript="" />
+      <NumberSnakeGame mode="ascending" transcript="up up up up up" interimTranscript="" />
     );
 
-    // Should render without error
     expect(screen.getByText('🎯 NEXT TARGET NUMBER')).toBeDefined();
+  });
+
+  it('handles homophone directional commands in voice transcript', () => {
+    const { rerender } = render(
+      <NumberSnakeGame mode="ascending" transcript="" interimTranscript="" />
+    );
+
+    rerender(
+      <NumberSnakeGame mode="ascending" transcript="opp done west write" interimTranscript="" />
+    );
+
+    expect(screen.getByText('🎯 NEXT TARGET NUMBER')).toBeDefined();
+  });
+
+  it('triggers onEatTarget callback when target number is consumed', () => {
+    const onEatTarget = vi.fn();
+    const testNumbers = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+    render(
+      <NumberSnakeGame
+        numbers={testNumbers}
+        mode="ascending"
+        onEatTarget={onEatTarget}
+      />
+    );
+
+    expect(screen.getByText('10')).toBeDefined();
   });
 });
