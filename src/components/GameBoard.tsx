@@ -13,6 +13,7 @@ import { SvgPlaceValueBlocks } from './widgets/SvgPlaceValueBlocks';
 import { SvgCoin } from './widgets/SvgCoin';
 import { SvgEquationCard } from './widgets/SvgEquationCard';
 import { SvgSpatialScene } from './widgets/SvgSpatialScene';
+import { NumberSnakeGame } from './widgets/NumberSnakeGame';
 
 interface GameBoardProps {
   item: QuizItem;
@@ -113,6 +114,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         return item.widget.spatialSceneProps ? (
           <SvgSpatialScene {...item.widget.spatialSceneProps} />
         ) : null;
+
+      case 'numbersnake':
+        return (
+          <NumberSnakeGame
+            {...item.widget.numberSnakeProps}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+            onComplete={() =>
+              onOptionSelect?.({
+                id: 'completed',
+                label: 'completed',
+                value: 'completed',
+              })
+            }
+          />
+        );
 
       default:
         return null;
