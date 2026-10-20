@@ -31,6 +31,8 @@ export function App() {
     tts,
     startGame,
     submitAnswer,
+    reportTargetEaten,
+    handleSnakeComplete,
     returnToLobby,
   } = useGameEngine();
 
@@ -109,6 +111,8 @@ export function App() {
                   onReadAloud={() =>
                     tts.speak(getTTSPrompt(currentItem, language, currentIndex))
                   }
+                  onEatTarget={(val) => reportTargetEaten(val)}
+                  onSnakeComplete={handleSnakeComplete}
                 />
 
                 <AdaptiveKeypad

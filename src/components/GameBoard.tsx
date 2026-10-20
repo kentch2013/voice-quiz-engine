@@ -31,6 +31,8 @@ interface GameBoardProps {
   onLanguageChange: (lang: VoiceLanguage) => void;
   onOptionSelect?: (option: { id: string; label: string; value: string }) => void;
   onReadAloud?: () => void;
+  onEatTarget?: (targetValue: number, eatenCount: number) => void;
+  onSnakeComplete?: () => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -49,6 +51,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onLanguageChange,
   onOptionSelect,
   onReadAloud,
+  onEatTarget,
+  onSnakeComplete,
 }) => {
   const currentDisplayedTranscript = interimTranscript || transcript;
 
@@ -121,13 +125,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             {...item.widget.numberSnakeProps}
             transcript={transcript}
             interimTranscript={interimTranscript}
-            onComplete={() =>
+            onEatTarget={onEatTarget}
+            onComplete={() => {
+              onSnakeComplete?.();
               onOptionSelect?.({
                 id: 'completed',
                 label: 'completed',
                 value: 'completed',
-              })
-            }
+              });
+            }}
           />
         );
 
@@ -140,27 +146,33 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center justify-center p-2 rounded-xl ${
-              timeLeft <= 5 ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-indigo-50 text-indigo-600'
-            }`}
-          >
-            <Timer size={24} />
-          </div>
-          <div className="text-left">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-              Time Left
-            </span>
-            <span
-              className={`text-2xl font-black ${
-                timeLeft <= 5 ? 'text-rose-600' : 'text-slate-800'
+        {item.widget?.type !== 'numbersnake' ? (
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center justify-center p-2 rounded-xl ${
+                timeLeft <= 5 ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-indigo-50 text-indigo-600'
               }`}
             >
-              {timeLeft}s
-            </span>
+              <Timer size={24} />
+            </div>
+            <div className="text-left">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                Time Left
+              </span>
+              <span
+                className={`text-2xl font-black ${
+                  timeLeft <= 5 ? 'text-rose-600' : 'text-slate-800'
+                }`}
+              >
+                {timeLeft}s
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl font-extrabold text-xs uppercase tracking-wider">
+            🐍 Continuous Play Mode
+          </div>
+        )}
 
         {/* In-game Language Switcher */}
         <LanguageToggle language={language} onLanguageChange={onLanguageChange} />

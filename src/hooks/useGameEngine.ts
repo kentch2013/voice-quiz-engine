@@ -40,8 +40,13 @@ export function useGameEngine() {
   const questionStartTimeRef = useRef<number>(Date.now());
   const silenceTimeRef = useRef<number>(0);
   const isTransitioningRef = useRef<boolean>(false);
+  const resultsRef = useRef<QuestionResult[]>(results);
 
   const currentItem: QuizItem | undefined = quizItems[currentIndex];
+
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
 
   // Legacy MathProblem compatibility getter
   const currentProblem: MathProblem | undefined = currentItem
@@ -274,9 +279,55 @@ export function useGameEngine() {
     setStatus('lobby');
   }, [tts, voiceRecognition]);
 
-  // Timers
+  // Report target eaten progress in Number Snake game mode
+  const reportTargetEaten = useCallback(
+    (targetValue?: number) => {
+      if (!currentItemRef.current || statusRef.current !== 'playing') return;
+
+      const activeItem = currentItemRef.current;
+      const timeSpent = Math.max(
+        1,
+        Math.round((Date.now() - questionStartTimeRef.current) / 1000)
+      );
+      questionStartTimeRef.current = Date.now();
+
+      const newResult: QuestionResult = {
+        questionId: `${activeItem.id}-target-${resultsRef.current.length + 1}`,
+        problem: activeItem.prompt,
+        expectedAnswer: targetValue ?? activeItem.expectedAnswer,
+        userAnswer: targetValue ?? activeItem.expectedAnswer,
+        isCorrect: true,
+        timeSpentSeconds: timeSpent,
+        inputMethod: 'voice',
+        attemptsCount: 1,
+      };
+
+      const updatedResults = [...resultsRef.current, newResult];
+      setResults(updatedResults);
+      resultsRef.current = updatedResults;
+
+      const totalCount = quizItems.length || 10;
+      const nextIndex = updatedResults.length;
+
+      if (nextIndex < totalCount) {
+        setCurrentIndex(nextIndex);
+      } else {
+        finishGameRef.current(updatedResults);
+      }
+    },
+    [quizItems.length]
+  );
+
+  const handleSnakeComplete = useCallback(() => {
+    finishGameRef.current(resultsRef.current);
+  }, []);
+
+  // Timers (bypassed in Number Snake Mode)
   useEffect(() => {
     if (status !== 'playing') return;
+
+    // Snake game continuous play mode: bypass 30s question timer
+    if (currentItem?.widget?.type === 'numbersnake') return;
 
     const timer = setInterval(() => {
       if (isTransitioningRef.current) return;
@@ -296,7 +347,7 @@ export function useGameEngine() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status, submitAnswer]);
+  }, [status, currentItem, submitAnswer]);
 
   useEffect(() => {
     if (status !== 'completed') return;
@@ -342,6 +393,8 @@ export function useGameEngine() {
     tts,
     startGame,
     submitAnswer,
+    reportTargetEaten,
+    handleSnakeComplete,
     returnToLobby,
   };
 }

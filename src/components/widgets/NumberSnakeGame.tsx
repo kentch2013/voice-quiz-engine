@@ -24,61 +24,88 @@ interface GridNumber {
 export interface NumberSnakeGameProps extends NumberSnakeProps {
   transcript?: string;
   interimTranscript?: string;
+  onEatTarget?: (targetValue: number, eatenCount: number) => void;
+  onComplete?: () => void;
 }
 
 /**
- * Utility function to parse directional speech commands from transcripts.
+ * Tokenize incoming speech transcript into sequential directional commands.
+ */
+export function extractVoiceDirections(text: string): Direction[] {
+  if (!text) return [];
+
+  let normalized = text.toLowerCase().trim();
+
+  // Preprocess Chinese directional synonyms
+  normalized = normalized
+    .replace(/向上/g, ' up ')
+    .replace(/上/g, ' up ')
+    .replace(/向下/g, ' down ')
+    .replace(/下/g, ' down ')
+    .replace(/向左/g, ' left ')
+    .replace(/左/g, ' left ')
+    .replace(/向右/g, ' right ')
+    .replace(/右/g, ' right ');
+
+  const words = normalized.split(/[\s,.!?;:]+/).filter(Boolean);
+  const directions: Direction[] = [];
+
+  const upSet = new Set(['up', 'opp', 'op', 'north', 'hop', 'cup']);
+  const downSet = new Set(['down', 'done', 'south']);
+  const leftSet = new Set(['left', 'west']);
+  const rightSet = new Set(['right', 'write', 'ite', 'east']);
+
+  let i = 0;
+  while (i < words.length) {
+    // Check 2-word compound phrases
+    if (i + 1 < words.length) {
+      const phrase = `${words[i]} ${words[i + 1]}`;
+      if (phrase === 'go up' || phrase === 'turn up' || phrase === 'move up') {
+        directions.push('UP');
+        i += 2;
+        continue;
+      }
+      if (phrase === 'go down' || phrase === 'turn down' || phrase === 'move down') {
+        directions.push('DOWN');
+        i += 2;
+        continue;
+      }
+      if (phrase === 'go left' || phrase === 'turn left' || phrase === 'move left') {
+        directions.push('LEFT');
+        i += 2;
+        continue;
+      }
+      if (phrase === 'go right' || phrase === 'turn right' || phrase === 'move right') {
+        directions.push('RIGHT');
+        i += 2;
+        continue;
+      }
+    }
+
+    // Check single word token / homophone
+    const w = words[i];
+    if (upSet.has(w)) {
+      directions.push('UP');
+    } else if (downSet.has(w)) {
+      directions.push('DOWN');
+    } else if (leftSet.has(w)) {
+      directions.push('LEFT');
+    } else if (rightSet.has(w)) {
+      directions.push('RIGHT');
+    }
+
+    i++;
+  }
+
+  return directions;
+}
+
+/**
+ * Utility function to parse single directional speech commands from transcripts.
  */
 export function parseVoiceDirection(text: string): Direction | null {
-  if (!text) return null;
-  const normalized = text.toLowerCase().trim();
-
-  // Check right before left/up/down in case of compound strings
-  if (
-    normalized.includes('go right') ||
-    normalized.includes('turn right') ||
-    normalized.includes('move right') ||
-    normalized.includes('right') ||
-    normalized.includes('向右') ||
-    normalized.includes('右')
-  ) {
-    return 'RIGHT';
-  }
-
-  if (
-    normalized.includes('go left') ||
-    normalized.includes('turn left') ||
-    normalized.includes('move left') ||
-    normalized.includes('left') ||
-    normalized.includes('向左') ||
-    normalized.includes('左')
-  ) {
-    return 'LEFT';
-  }
-
-  if (
-    normalized.includes('go up') ||
-    normalized.includes('turn up') ||
-    normalized.includes('move up') ||
-    normalized.includes('up') ||
-    normalized.includes('向上') ||
-    normalized.includes('上')
-  ) {
-    return 'UP';
-  }
-
-  if (
-    normalized.includes('go down') ||
-    normalized.includes('turn down') ||
-    normalized.includes('move down') ||
-    normalized.includes('down') ||
-    normalized.includes('向下') ||
-    normalized.includes('下')
-  ) {
-    return 'DOWN';
-  }
-
-  return null;
+  const dirs = extractVoiceDirections(text);
+  return dirs.length > 0 ? dirs[0] : null;
 }
 
 /**
@@ -141,6 +168,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
   mode = 'ascending',
   transcript = '',
   interimTranscript = '',
+  onEatTarget,
   onComplete,
 }) => {
   // Sort numbers according to objective mode
@@ -172,34 +200,75 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
 
   const pendingDirectionRef = useRef<Direction>('UP');
   const currentDirectionRef = useRef<Direction>('UP');
-  const lastProcessedTranscriptRef = useRef<string>('');
+  const snakeRef = useRef<Position[]>(snake);
+  const processedCommandCountRef = useRef<number>(0);
 
   currentDirectionRef.current = direction;
+  snakeRef.current = snake;
 
-  // Handle direction change request safely
+  // Handle direction change request safely without swallowing 180-degree turns
   const changeDirection = useCallback((newDir: Direction) => {
     const current = currentDirectionRef.current;
-    if (
+    const isOpposite =
       (newDir === 'UP' && current === 'DOWN') ||
       (newDir === 'DOWN' && current === 'UP') ||
       (newDir === 'LEFT' && current === 'RIGHT') ||
-      (newDir === 'RIGHT' && current === 'LEFT')
-    ) {
-      return; // Do not allow instant 180-degree reverse into self
+      (newDir === 'RIGHT' && current === 'LEFT');
+
+    if (isOpposite) {
+      if (snakeRef.current.length <= 1) {
+        pendingDirectionRef.current = newDir;
+        setDirection(newDir);
+      } else {
+        // Gracefully steer orthogonal to avoid swallowing commands or crashing directly into neck
+        const head = snakeRef.current[0];
+        const bodySet = new Set(
+          snakeRef.current.slice(1).map((s) => `${s.x},${s.y}`)
+        );
+
+        let candidate1: Direction;
+        let candidate2: Direction;
+
+        if (current === 'UP' || current === 'DOWN') {
+          candidate1 = 'LEFT';
+          candidate2 = 'RIGHT';
+        } else {
+          candidate1 = 'UP';
+          candidate2 = 'DOWN';
+        }
+
+        const pos1 = getWrappedCoordinate(head, candidate1);
+        const safe1 = !bodySet.has(`${pos1.x},${pos1.y}`);
+
+        const orthogonalDir = safe1 ? candidate1 : candidate2;
+        pendingDirectionRef.current = orthogonalDir;
+        setDirection(orthogonalDir);
+      }
+    } else {
+      pendingDirectionRef.current = newDir;
+      setDirection(newDir);
     }
-    pendingDirectionRef.current = newDir;
-    setDirection(newDir);
   }, []);
 
-  // Voice command handling
+  // Voice command handling with tokenized delta evaluation
   useEffect(() => {
     const combined = `${transcript} ${interimTranscript}`.trim();
-    if (combined && combined !== lastProcessedTranscriptRef.current) {
-      lastProcessedTranscriptRef.current = combined;
-      const voiceDir = parseVoiceDirection(combined);
-      if (voiceDir) {
-        changeDirection(voiceDir);
+    if (!combined) {
+      processedCommandCountRef.current = 0;
+      return;
+    }
+
+    const commands = extractVoiceDirections(combined);
+
+    if (commands.length < processedCommandCountRef.current) {
+      processedCommandCountRef.current = 0;
+    }
+
+    if (commands.length > processedCommandCountRef.current) {
+      for (let i = processedCommandCountRef.current; i < commands.length; i++) {
+        changeDirection(commands[i]);
       }
+      processedCommandCountRef.current = commands.length;
     }
   }, [transcript, interimTranscript, changeDirection]);
 
@@ -275,6 +344,10 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
 
             const nextIndex = currentTargetIndex + 1;
             setCurrentTargetIndex(nextIndex);
+
+            if (onEatTarget) {
+              onEatTarget(hitNumber.value, nextIndex);
+            }
 
             if (nextIndex >= sortedTargets.current.length) {
               // Game Completed!

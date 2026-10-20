@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseVoiceDirection,
+  extractVoiceDirections,
   getWrappedCoordinate,
   placeNumbersOnGrid,
 } from '../../components/widgets/NumberSnakeGame';
@@ -90,7 +91,7 @@ describe('Number Snake Game Unit Tests', () => {
     });
   });
 
-  describe('Voice Direction Parsing', () => {
+  describe('Voice Direction Parsing & Homophone Extraction', () => {
     it('parses single-word direction voice commands correctly', () => {
       expect(parseVoiceDirection('up')).toBe('UP');
       expect(parseVoiceDirection('down')).toBe('DOWN');
@@ -105,15 +106,37 @@ describe('Number Snake Game Unit Tests', () => {
       expect(parseVoiceDirection('go right')).toBe('RIGHT');
     });
 
-    it('parses Chinese directional speech commands', () => {
-      expect(parseVoiceDirection('向上')).toBe('UP');
-      expect(parseVoiceDirection('向下')).toBe('DOWN');
-      expect(parseVoiceDirection('向左')).toBe('LEFT');
-      expect(parseVoiceDirection('向右')).toBe('RIGHT');
+    it('parses homophones and short-word directional commands accurately', () => {
+      // UP homophones: up, go up, turn up, opp, op, north, hop, cup, 向上, 上
+      expect(extractVoiceDirections('up go up turn up opp op north hop cup 向上 上')).toEqual([
+        'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP',
+      ]);
+
+      // DOWN homophones: down, go down, turn down, done, south, 向下, 下
+      expect(extractVoiceDirections('down go down turn down done south 向下 下')).toEqual([
+        'DOWN', 'DOWN', 'DOWN', 'DOWN', 'DOWN', 'DOWN', 'DOWN',
+      ]);
+
+      // LEFT homophones: left, go left, turn left, west, 向左, 左
+      expect(extractVoiceDirections('left go left turn left west 向左 左')).toEqual([
+        'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT',
+      ]);
+
+      // RIGHT homophones: right, go right, turn right, write, ite, east, 向右, 右
+      expect(extractVoiceDirections('right go right turn right write ite east 向右 右')).toEqual([
+        'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT',
+      ]);
     });
 
-    it('returns null for unrecognized transcripts', () => {
+    it('extracts repeatable directional words in sequence (e.g. saying up 5 times)', () => {
+      const dirs = extractVoiceDirections('up up up up up');
+      expect(dirs).toEqual(['UP', 'UP', 'UP', 'UP', 'UP']);
+      expect(dirs).toHaveLength(5);
+    });
+
+    it('returns null / empty array for unrecognized transcripts', () => {
       expect(parseVoiceDirection('')).toBeNull();
+      expect(extractVoiceDirections('')).toEqual([]);
       expect(parseVoiceDirection('hello snake')).toBeNull();
       expect(parseVoiceDirection('what is twenty plus five')).toBeNull();
     });
