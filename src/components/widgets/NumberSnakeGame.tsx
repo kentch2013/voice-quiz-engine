@@ -29,6 +29,229 @@ export interface NumberSnakeGameProps extends NumberSnakeProps {
 }
 
 /**
+ * Compute Levenshtein edit distance between two strings.
+ */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+/**
+ * Phonetic / consonant skeletal encoder for acoustic similarity matching.
+ */
+export function toPhonetic(word: string): string {
+  if (!word) return '';
+  let w = word.toLowerCase().trim().replace(/[^a-z]/g, '');
+  if (!w) return '';
+
+  // Common phonetic acoustic transformations
+  w = w.replace(/ight/g, 'it');
+  w = w.replace(/(ough|augh)/g, 'af');
+  if (w.startsWith('wr')) w = 'r' + w.slice(2);
+  if (w.startsWith('kn') || w.startsWith('gn')) w = 'n' + w.slice(2);
+  w = w.replace(/ph/g, 'f');
+  w = w.replace(/ck/g, 'k');
+  w = w.replace(/mb$/g, 'm');
+  w = w.replace(/gh$/g, 'f');
+  w = w.replace(/th/g, 'd');
+  w = w.replace(/qu/g, 'k');
+
+  const result: string[] = [];
+  const isInitialVowel = 'aeiouy'.includes(w[0]);
+  if (isInitialVowel) {
+    result.push('V');
+  }
+
+  for (let i = 0; i < w.length; i++) {
+    const ch = w[i];
+    if ('aeiouy'.includes(ch)) {
+      continue;
+    }
+    let code = '';
+    if (ch === 'r' || ch === 'w') code = 'R';
+    else if (ch === 'l') code = 'L';
+    else if (ch === 'f' || ch === 'v') code = 'F';
+    else if (ch === 'd' || ch === 't') code = 'D';
+    else if (ch === 'p' || ch === 'b') code = 'P';
+    else if (ch === 'm' || ch === 'n') code = 'N';
+    else if (ch === 's' || ch === 'z' || ch === 'j') code = 'S';
+    else if (ch === 'k' || ch === 'g' || ch === 'c' || ch === 'q' || ch === 'x') code = 'K';
+    else if (ch === 'h') code = i === 0 ? 'H' : '';
+
+    if (code && (result.length === 0 || result[result.length - 1] !== code)) {
+      result.push(code);
+    }
+  }
+
+  return result.join('');
+}
+
+/**
+ * Weighted distance between two phonetic skeletal strings.
+ */
+function phoneticDistance(p1: string, p2: string): number {
+  if (p1 === p2) return 0;
+  if (p1.length === 0) return p2.length;
+  if (p2.length === 0) return p1.length;
+
+  const dp: number[][] = Array.from({ length: p2.length + 1 }, () =>
+    new Array(p1.length + 1).fill(0)
+  );
+
+  for (let j = 0; j <= p1.length; j++) dp[0][j] = j;
+  for (let i = 0; i <= p2.length; i++) dp[i][0] = i;
+
+  for (let i = 1; i <= p2.length; i++) {
+    for (let j = 1; j <= p1.length; j++) {
+      const c1 = p1[j - 1];
+      const c2 = p2[i - 1];
+
+      let subCost = 1.0;
+      if (c1 === c2) {
+        subCost = 0.0;
+      } else if ((c1 === 'L' && c2 === 'R') || (c1 === 'R' && c2 === 'L')) {
+        subCost = 0.3; // Liquid / Rhotic proximity
+      } else if ((c1 === 'F' && c2 === 'P') || (c1 === 'P' && c2 === 'F')) {
+        subCost = 0.4; // Fricative / Stop labial proximity
+      } else if ((c1 === 'D' && c2 === 'N') || (c1 === 'N' && c2 === 'D')) {
+        subCost = 0.5; // Alveolar stop / Nasal proximity
+      }
+
+      dp[i][j] = Math.min(
+        dp[i - 1][j - 1] + subCost,
+        dp[i][j - 1] + 1.0,
+        dp[i - 1][j] + 1.0
+      );
+    }
+  }
+
+  return dp[p2.length][p1.length];
+}
+
+/**
+ * Simplify acoustic spellings prior to string distance comparison.
+ */
+function simplifyAcoustic(word: string): string {
+  let w = word.toLowerCase().trim().replace(/[^a-z]/g, '');
+  w = w.replace(/ight/g, 'it');
+  w = w.replace(/(ough|augh)/g, 'af');
+  if (w.startsWith('wr')) w = 'r' + w.slice(2);
+  if (w.startsWith('kn') || w.startsWith('gn')) w = 'n' + w.slice(2);
+  w = w.replace(/ph/g, 'f');
+  w = w.replace(/ck/g, 'k');
+  w = w.replace(/gh$/g, 'f');
+  w = w.replace(/th/g, 'd');
+  return w;
+}
+
+/**
+ * Programmatic distance and phonetic acoustic similarity matcher for directional commands.
+ */
+export function matchFuzzyDirection(word: string): Direction | null {
+  if (!word || word.length < 2) return null;
+  const cleaned = word.toLowerCase().trim().replace(/[^a-z]/g, '');
+  if (!cleaned) return null;
+
+  const CANONICAL_DIRECTIONS: { dir: Direction; canonical: string }[] = [
+    { dir: 'UP', canonical: 'up' },
+    { dir: 'DOWN', canonical: 'down' },
+    { dir: 'LEFT', canonical: 'left' },
+    { dir: 'RIGHT', canonical: 'right' },
+  ];
+
+  const simplifiedInput = simplifyAcoustic(cleaned);
+  const wordPhonetic = toPhonetic(cleaned);
+
+  const scores: { dir: Direction; score: number }[] = [];
+
+  for (const { dir, canonical } of CANONICAL_DIRECTIONS) {
+    // Length guard: directional words up/down/left/right are short (2-5 chars).
+    // Misheard variants are typically 3-5 chars. Ignore words with length difference > 2 (or > 1 for 'up').
+    const lenDiff = Math.abs(cleaned.length - canonical.length);
+    if (dir === 'UP' && (cleaned.length > 4 || cleaned.length < 2)) continue;
+    if (dir !== 'UP' && lenDiff > 2) continue;
+
+    const simplifiedCanonical = simplifyAcoustic(canonical);
+    const rawEdit = levenshteinDistance(simplifiedInput, simplifiedCanonical);
+    const maxTextLen = Math.max(simplifiedInput.length, simplifiedCanonical.length);
+    let textSim = 1 - rawEdit / maxTextLen;
+    if (textSim < 0) textSim = 0;
+
+    const canonicalPhonetic = toPhonetic(canonical);
+    const phonDist = phoneticDistance(wordPhonetic, canonicalPhonetic);
+    const maxPhonLen = Math.max(wordPhonetic.length, canonicalPhonetic.length) || 1;
+    let phonSim = 1 - phonDist / maxPhonLen;
+    if (phonSim < 0) phonSim = 0;
+
+    let composite = 0.5 * textSim + 0.5 * phonSim;
+
+    // Initial consonant / acoustic frame alignment bonuses
+    if (dir === 'RIGHT') {
+      if (cleaned.startsWith('r') || cleaned.startsWith('wr')) composite += 0.12;
+      else if (cleaned.startsWith('l') && (cleaned.includes('i') || cleaned.includes('y'))) composite += 0.08;
+    } else if (dir === 'LEFT') {
+      if (cleaned.startsWith('l')) composite += 0.12;
+    } else if (dir === 'DOWN') {
+      if (cleaned.startsWith('d') || cleaned.startsWith('t')) composite += 0.12;
+    } else if (dir === 'UP') {
+      if (cleaned.startsWith('u') || cleaned.startsWith('a') || cleaned.startsWith('o')) composite += 0.12;
+      if (cleaned.endsWith('p') || cleaned.endsWith('b')) composite += 0.08;
+    }
+
+    // Penalty for large text distance or length mismatches
+    if (rawEdit >= 3 || textSim < 0.25) {
+      composite *= 0.5;
+    }
+
+    scores.push({ dir, score: composite });
+  }
+
+  if (scores.length === 0) return null;
+
+  // Sort candidates by highest score
+  scores.sort((a, b) => b.score - a.score);
+
+  const top = scores[0];
+  const second = scores[1];
+
+  const ACCEPTANCE_THRESHOLD = 0.55;
+  const MARGIN_THRESHOLD = 0.10;
+
+  if (top && top.score >= ACCEPTANCE_THRESHOLD) {
+    if (!second || (top.score - second.score) >= MARGIN_THRESHOLD) {
+      return top.dir;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Tokenize incoming speech transcript into sequential directional commands.
  */
 export function extractVoiceDirections(text: string): Direction[] {
@@ -92,6 +315,12 @@ export function extractVoiceDirections(text: string): Direction[] {
       directions.push('LEFT');
     } else if (rightSet.has(w) || w.startsWith('rig') || w.startsWith('ri') || w.startsWith('wri')) {
       directions.push('RIGHT');
+    } else {
+      // Programmatic distance / acoustic similarity fuzzy matching
+      const fuzzyDir = matchFuzzyDirection(w);
+      if (fuzzyDir) {
+        directions.push(fuzzyDir);
+      }
     }
 
     i++;
