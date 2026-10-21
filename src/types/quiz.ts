@@ -16,6 +16,7 @@ export type WidgetType =
   | 'spatialscene'
   | 'numbersnake'
   | 'letterhero'
+  | 'plinko'
   | 'none';
 
 export interface QuizOption {
@@ -131,6 +132,11 @@ export interface LetterHeroProps {
   onScoreUpdate?: (score: number, rating: 'Perfect!' | 'Good!' | 'Miss') => void;
 }
 
+export interface PlinkoProps {
+  onComplete?: (wellNumber: number) => void;
+  dropPosition?: number; // 0..4
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -146,6 +152,7 @@ export interface WidgetConfig {
   spatialSceneProps?: SpatialSceneProps;
   numberSnakeProps?: NumberSnakeProps;
   letterHeroProps?: LetterHeroProps;
+  plinkoProps?: PlinkoProps;
 }
 
 export interface KeypadConfig {
