@@ -171,16 +171,22 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
   onEatTarget,
   onComplete,
 }) => {
-  // Sort numbers according to objective mode synchronously
+  // Lock initial game configuration at mount to ensure state isolation across parent re-renders
+  const [initialConfig] = useState(() => ({
+    numbers,
+    mode,
+  }));
+
+  // Sort numbers according to objective mode synchronously with strict numeric sorting
   const sortedTargets = useMemo(() => {
-    const copy = [...numbers];
-    if (mode === 'ascending') {
+    const copy = [...initialConfig.numbers];
+    if (initialConfig.mode === 'ascending') {
       copy.sort((a, b) => a - b);
     } else {
       copy.sort((a, b) => b - a);
     }
     return copy;
-  }, [numbers, mode]);
+  }, [initialConfig]);
 
   const initialSnake: Position[] = [
     { x: 8, y: 7 },
@@ -191,7 +197,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
   const [snake, setSnake] = useState<Position[]>(initialSnake);
   const [direction, setDirection] = useState<Direction>('UP');
   const [gridNumbers, setGridNumbers] = useState<GridNumber[]>(() =>
-    placeNumbersOnGrid(numbers, initialSnake)
+    placeNumbersOnGrid(initialConfig.numbers, initialSnake)
   );
   const [currentTargetIndex, setCurrentTargetIndex] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
@@ -365,6 +371,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
             setGridNumbers((prev) => prev.filter((gn) => gn.id !== hitNumber.id));
 
             const nextIndex = targetIndex + 1;
+            currentTargetIndexRef.current = nextIndex;
             setCurrentTargetIndex(nextIndex);
 
             if (onEatTargetRef.current) {
@@ -429,7 +436,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
       </div>
 
       {/* 16x16 Snake Grid Board */}
-      <div className="relative bg-slate-900 rounded-2xl p-2.5 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full aspect-square max-w-[560px]">
+      <div className="relative bg-slate-900 rounded-2xl p-2.5 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full aspect-square max-w-[500px]">
         <div
           className="w-full h-full grid grid-cols-16 grid-rows-16 gap-[1px] bg-slate-800/60 rounded-xl overflow-hidden"
           style={{
@@ -466,7 +473,7 @@ export const NumberSnakeGame: React.FC<NumberSnakeGameProps> = ({
 
                 {/* Number Food Tile */}
                 {gridNum && (
-                  <div className="absolute inset-0.5 rounded-lg flex items-center justify-center text-xs sm:text-sm md:text-base font-black shadow-md transition-transform duration-200 bg-indigo-600 text-white opacity-90">
+                  <div className="absolute inset-0.5 rounded-lg flex items-center justify-center text-sm sm:text-base md:text-lg font-black shadow-md transition-transform duration-200 bg-indigo-600 text-white opacity-90">
                     {gridNum.value}
                   </div>
                 )}

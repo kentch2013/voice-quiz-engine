@@ -104,12 +104,33 @@ describe('NumberSnakeGame Component', () => {
     const testNumbers = [12, 45, 3, 89, 27, 64, 51, 98, 33, 76];
     const { container } = render(<NumberSnakeGame numbers={testNumbers} mode="ascending" />);
 
-    // Board container max width max-w-[560px]
-    const boardContainer = container.querySelector('.max-w-\\[560px\\]');
+    // Board container max width max-w-[500px]
+    const boardContainer = container.querySelector('.max-w-\\[500px\\]');
     expect(boardContainer).not.toBeNull();
 
     // Food tile with enlarged font size classes
-    const foodTile = container.querySelector('.text-xs.sm\\:text-sm.md\\:text-base');
+    const foodTile = container.querySelector('.text-sm.sm\\:text-base.md\\:text-lg');
     expect(foodTile).not.toBeNull();
+  });
+
+  it('maintains target order and state isolation when parent re-renders with new numbers prop', () => {
+    const initialNumbers = [5, 25, 8, 90, 12, 44, 3, 77, 61, 30];
+    const onEatTarget = vi.fn();
+
+    const { rerender } = render(
+      <NumberSnakeGame numbers={initialNumbers} mode="ascending" onEatTarget={onEatTarget} />
+    );
+
+    expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
+
+    // Simulate parent re-render with updated/new numbers prop (e.g. from hook/engine)
+    const newNumbersProp = [99, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+    rerender(
+      <NumberSnakeGame numbers={newNumbersProp} mode="ascending" onEatTarget={onEatTarget} />
+    );
+
+    // Eaten count should remain 0 / 10 and grid state should remain isolated (not reset to newNumbersProp)
+    expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
+    expect(screen.getByText('3')).toBeDefined(); // 3 was the minimum in initialNumbers
   });
 });
