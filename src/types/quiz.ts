@@ -15,6 +15,7 @@ export type WidgetType =
   | 'colorswatch'
   | 'spatialscene'
   | 'numbersnake'
+  | 'letterhero'
   | 'none';
 
 export interface QuizOption {
@@ -124,6 +125,12 @@ export interface NumberSnakeProps {
   onComplete?: () => void;
 }
 
+export interface LetterHeroProps {
+  letters?: string[];
+  onComplete?: () => void;
+  onScoreUpdate?: (score: number, rating: 'Perfect!' | 'Good!' | 'Miss') => void;
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -138,6 +145,7 @@ export interface WidgetConfig {
   colorSwatchProps?: ColorSwatchProps;
   spatialSceneProps?: SpatialSceneProps;
   numberSnakeProps?: NumberSnakeProps;
+  letterHeroProps?: LetterHeroProps;
 }
 
 export interface KeypadConfig {

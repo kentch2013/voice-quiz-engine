@@ -14,6 +14,7 @@ import { SvgCoin } from './widgets/SvgCoin';
 import { SvgEquationCard } from './widgets/SvgEquationCard';
 import { SvgSpatialScene } from './widgets/SvgSpatialScene';
 import { NumberSnakeGame } from './widgets/NumberSnakeGame';
+import { LetterHeroGame } from './widgets/LetterHeroGame';
 
 interface GameBoardProps {
   item: QuizItem;
@@ -137,6 +138,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           />
         );
 
+      case 'letterhero':
+        return (
+          <LetterHeroGame
+            {...item.widget.letterHeroProps}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+            onComplete={() => {
+              onSnakeComplete?.();
+              onOptionSelect?.({
+                id: 'completed',
+                label: 'completed',
+                value: 'completed',
+              });
+            }}
+          />
+        );
+
       default:
         return null;
     }
@@ -146,7 +164,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        {item.widget?.type !== 'numbersnake' ? (
+        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' ? (
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center justify-center p-2 rounded-xl ${

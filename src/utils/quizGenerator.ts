@@ -142,6 +142,13 @@ export const TOPICS: Topic[] = [
     icon: '🔍',
     gradeBands: ['K-1', '2-3'],
   },
+  {
+    id: 'letter-hero',
+    title: '🎸 Letter Hero Rhythm Game',
+    description: 'Say falling letters when they hit the strike zone!',
+    icon: '🎸',
+    gradeBands: ['K-1', '2-3'],
+  },
 ];
 
 export function getTTSPrompt(
@@ -211,6 +218,8 @@ export function generateQuizItems(
       return generateSpatialPrepositionsItems(gradeBand, count);
     case 'odd-one-out':
       return generateOddOneOutItems(gradeBand, count);
+    case 'letter-hero':
+      return generateLetterHeroItems(gradeBand, count);
     case 'math-sprint':
     default:
       return generateMathItems(gradeBand, count);
@@ -924,7 +933,7 @@ function generateOddOneOutItems(gradeBand: GradeBand, count: number): QuizItem[]
   return items;
 }
 
-const LETTER_SPOKEN_NAMES: Record<string, string[]> = {
+export const LETTER_SPOKEN_NAMES: Record<string, string[]> = {
   a: ['a', 'ay', 'eh', 'aye', 'hey', 'apple', 'a as in apple', 'letter a'],
   b: ['b', 'bee', 'be', 'boy', 'b as in boy', 'letter b'],
   c: ['c', 'cee', 'see', 'sea', 'si', 'cat', 'c as in cat', 'letter c'],
@@ -995,6 +1004,43 @@ function generateLetterIdentificationItems(gradeBand: GradeBand, count: number):
       },
       keypad: {
         type: 'alphabet',
+      },
+    });
+  }
+
+  return items;
+}
+
+function generateLetterHeroItems(gradeBand: GradeBand, count: number): QuizItem[] {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const items: QuizItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const letterSet: string[] = [];
+    for (let j = 0; j < 10; j++) {
+      const randomIndex = Math.floor(Math.random() * alphabet.length);
+      letterSet.push(alphabet[randomIndex]);
+    }
+
+    items.push({
+      id: `letter-hero-${i}-${Date.now()}`,
+      topicId: 'letter-hero',
+      gradeBand,
+      prompt: 'Letter Hero Rhythm Game!',
+      ttsPrompt: 'Say the falling letters as they enter the strike zone!',
+      ttsPromptConcise: 'Say the falling letters!',
+      ttsPromptZh: '在字母进入击打区时说出它们！',
+      ttsPromptZhConcise: '说出掉落的字母！',
+      expectedAnswer: 'completed',
+      acceptableAnswers: ['completed', 'done', 'win', '10'],
+      widget: {
+        type: 'letterhero',
+        letterHeroProps: {
+          letters: letterSet,
+        },
+      },
+      keypad: {
+        type: 'none',
       },
     });
   }
