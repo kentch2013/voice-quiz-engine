@@ -209,4 +209,43 @@ describe('Audio Pipeline & Mute Guard in useGameEngine', () => {
 
     expect(result.current.voiceRecognition.isListening).toBe(true);
   });
+
+  it('suppresses instruction TTS after eating the first food item in Number Snake mode', async () => {
+    const { result } = renderHook(() => useGameEngine());
+
+    // Set topic to greater-less-than (Number Snake)
+    act(() => {
+      result.current.setSelectedTopicId('greater-less-than');
+    });
+
+    // Start game
+    await act(async () => {
+      result.current.startGame();
+    });
+
+    expect(result.current.status).toBe('playing');
+    expect(result.current.currentItem?.widget?.type).toBe('numbersnake');
+
+    // TTS should speak initial instruction prompt once when game starts (currentIndex = 0)
+    const initialSpeakCalls = mockSpeak.mock.calls.length;
+    expect(initialSpeakCalls).toBeGreaterThanOrEqual(1);
+
+    // Eat first target item -> reportTargetEaten -> currentIndex becomes 1
+    await act(async () => {
+      result.current.reportTargetEaten(10);
+    });
+
+    expect(result.current.currentIndex).toBe(1);
+    // mockSpeak call count should NOT increase after eating the first food item
+    expect(mockSpeak.mock.calls.length).toBe(initialSpeakCalls);
+
+    // Eat second target item -> reportTargetEaten -> currentIndex becomes 2
+    await act(async () => {
+      result.current.reportTargetEaten(20);
+    });
+
+    expect(result.current.currentIndex).toBe(2);
+    // mockSpeak call count should remain unchanged (TTS suppressed)
+    expect(mockSpeak.mock.calls.length).toBe(initialSpeakCalls);
+  });
 });

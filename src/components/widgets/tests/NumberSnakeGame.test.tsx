@@ -90,13 +90,26 @@ describe('NumberSnakeGame Component', () => {
   it('progresses continuous movement ticks automatically without freezing', () => {
     render(<NumberSnakeGame mode="ascending" />);
 
-    // Advance timers across multiple game ticks (380ms per tick)
+    // Advance timers across multiple game ticks (750ms per tick)
     act(() => {
-      vi.advanceTimersByTime(380 * 5);
+      vi.advanceTimersByTime(750 * 5);
     });
 
     // Verify component remains rendered and active
     expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
     expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
+  });
+
+  it('renders enlarged board container and enlarged food tile numbers', () => {
+    const testNumbers = [12, 45, 3, 89, 27, 64, 51, 98, 33, 76];
+    const { container } = render(<NumberSnakeGame numbers={testNumbers} mode="ascending" />);
+
+    // Board container max width max-w-[560px]
+    const boardContainer = container.querySelector('.max-w-\\[560px\\]');
+    expect(boardContainer).not.toBeNull();
+
+    // Food tile with enlarged font size classes
+    const foodTile = container.querySelector('.text-xs.sm\\:text-sm.md\\:text-base');
+    expect(foodTile).not.toBeNull();
   });
 });
