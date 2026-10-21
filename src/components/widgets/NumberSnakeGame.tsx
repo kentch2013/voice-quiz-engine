@@ -5,7 +5,7 @@ import type { NumberSnakeProps } from '../../types/quiz';
 import { playCorrectChime, playWrongSound } from '../../utils/audioSynthesizer';
 
 const GRID_SIZE = 16;
-const TICK_MS = 380;
+const TICK_MS = 1100;
 
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
@@ -50,10 +50,10 @@ export function extractVoiceDirections(text: string): Direction[] {
   const words = normalized.split(/[\s,.!?;:]+/).filter(Boolean);
   const directions: Direction[] = [];
 
-  const upSet = new Set(['up', 'opp', 'op', 'north', 'hop', 'cup']);
-  const downSet = new Set(['down', 'done', 'south']);
-  const leftSet = new Set(['left', 'west']);
-  const rightSet = new Set(['right', 'write', 'ite', 'east']);
+  const upSet = new Set(['up', 'opp', 'op', 'north', 'hop', 'cup', 'u', 'shang']);
+  const downSet = new Set(['down', 'done', 'south', 'd', 'dow', 'xia']);
+  const leftSet = new Set(['left', 'west', 'l', 'lef', 'zuo']);
+  const rightSet = new Set(['right', 'write', 'ite', 'east', 'r', 'rig', 'ri', 'you']);
 
   let i = 0;
   while (i < words.length) {
@@ -82,15 +82,15 @@ export function extractVoiceDirections(text: string): Direction[] {
       }
     }
 
-    // Check single word token / homophone
+    // Check single word token / homophone / prefix / partial syllable
     const w = words[i];
-    if (upSet.has(w)) {
+    if (upSet.has(w) || w.startsWith('up') || w.startsWith('op')) {
       directions.push('UP');
-    } else if (downSet.has(w)) {
+    } else if (downSet.has(w) || w.startsWith('dow') || w.startsWith('don')) {
       directions.push('DOWN');
-    } else if (leftSet.has(w)) {
+    } else if (leftSet.has(w) || w.startsWith('lef')) {
       directions.push('LEFT');
-    } else if (rightSet.has(w)) {
+    } else if (rightSet.has(w) || w.startsWith('rig') || w.startsWith('ri') || w.startsWith('wri')) {
       directions.push('RIGHT');
     }
 

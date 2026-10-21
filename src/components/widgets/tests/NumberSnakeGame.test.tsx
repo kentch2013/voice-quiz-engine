@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { NumberSnakeGame } from '../NumberSnakeGame';
+import { NumberSnakeGame, extractVoiceDirections } from '../NumberSnakeGame';
 
 // Mock audioSynthesizer to avoid AudioContext issues in JSDOM
 vi.mock('../../../utils/audioSynthesizer', () => ({
@@ -90,13 +90,21 @@ describe('NumberSnakeGame Component', () => {
   it('progresses continuous movement ticks automatically without freezing', () => {
     render(<NumberSnakeGame mode="ascending" />);
 
-    // Advance timers across multiple game ticks (380ms per tick)
+    // Advance timers across multiple game ticks (1100ms per tick)
     act(() => {
-      vi.advanceTimersByTime(380 * 5);
+      vi.advanceTimersByTime(1100 * 5);
     });
 
     // Verify component remains rendered and active
     expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
     expect(screen.queryByText(/NEXT TARGET NUMBER/i)).toBeNull();
+  });
+
+  it('extracts voice directions immediately from partial syllables and prefixes', () => {
+    expect(extractVoiceDirections('u')).toEqual(['UP']);
+    expect(extractVoiceDirections('dow')).toEqual(['DOWN']);
+    expect(extractVoiceDirections('lef')).toEqual(['LEFT']);
+    expect(extractVoiceDirections('rig')).toEqual(['RIGHT']);
+    expect(extractVoiceDirections('u dow lef rig')).toEqual(['UP', 'DOWN', 'LEFT', 'RIGHT']);
   });
 });
