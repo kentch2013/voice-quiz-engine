@@ -21,6 +21,7 @@ export function App() {
     questionTimeLeft,
     showSilenceNudge,
     showExpiredAnswer,
+    isPlinkoActive,
     restartCountdown,
     keypadInput,
     setKeypadInput,
@@ -33,6 +34,7 @@ export function App() {
     submitAnswer,
     reportTargetEaten,
     handleSnakeComplete,
+    handlePlinkoComplete,
     returnToLobby,
   } = useGameEngine();
 
@@ -98,6 +100,7 @@ export function App() {
                   timeLeft={questionTimeLeft}
                   showSilenceNudge={showSilenceNudge}
                   showExpiredAnswer={showExpiredAnswer}
+                  isPlinkoActive={isPlinkoActive}
                   questionIndex={currentIndex}
                   transcript={voiceRecognition.transcript}
                   interimTranscript={voiceRecognition.interimTranscript}
@@ -113,17 +116,20 @@ export function App() {
                   }
                   onEatTarget={(val) => reportTargetEaten(val)}
                   onSnakeComplete={handleSnakeComplete}
+                  onPlinkoComplete={handlePlinkoComplete}
                 />
 
-                <AdaptiveKeypad
-                  type={currentItem.keypad?.type || 'numeric'}
-                  options={currentItem.keypad?.options || []}
-                  value={keypadInput}
-                  onKeyPress={handleKeypadKeyPress}
-                  onDelete={handleKeypadDelete}
-                  onSubmit={handleKeypadSubmit}
-                  onOptionSelect={handleOptionSelect}
-                />
+                {!isPlinkoActive && (
+                  <AdaptiveKeypad
+                    type={currentItem.keypad?.type || 'numeric'}
+                    options={currentItem.keypad?.options || []}
+                    value={keypadInput}
+                    onKeyPress={handleKeypadKeyPress}
+                    onDelete={handleKeypadDelete}
+                    onSubmit={handleKeypadSubmit}
+                    onOptionSelect={handleOptionSelect}
+                  />
+                )}
               </>
             )}
           </>

@@ -15,12 +15,14 @@ import { SvgEquationCard } from './widgets/SvgEquationCard';
 import { SvgSpatialScene } from './widgets/SvgSpatialScene';
 import { NumberSnakeGame } from './widgets/NumberSnakeGame';
 import { LetterHeroGame } from './widgets/LetterHeroGame';
+import { PlinkoBonusGame } from './widgets/PlinkoBonusGame';
 
 interface GameBoardProps {
   item: QuizItem;
   timeLeft: number;
   showSilenceNudge: boolean;
   showExpiredAnswer?: boolean;
+  isPlinkoActive?: boolean;
   questionIndex?: number;
   transcript: string;
   interimTranscript: string;
@@ -34,6 +36,7 @@ interface GameBoardProps {
   onReadAloud?: () => void;
   onEatTarget?: (targetValue: number, eatenCount: number) => void;
   onSnakeComplete?: () => void;
+  onPlinkoComplete?: (wellNumber: number) => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -41,6 +44,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   timeLeft,
   showSilenceNudge,
   showExpiredAnswer = false,
+  isPlinkoActive = false,
   questionIndex,
   transcript,
   interimTranscript,
@@ -54,10 +58,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onReadAloud,
   onEatTarget,
   onSnakeComplete,
+  onPlinkoComplete,
 }) => {
   const currentDisplayedTranscript = interimTranscript || transcript;
 
   const renderWidget = () => {
+    if (isPlinkoActive) {
+      return (
+        <PlinkoBonusGame
+          transcript={transcript}
+          interimTranscript={interimTranscript}
+          onComplete={onPlinkoComplete}
+        />
+      );
+    }
+
     if (!item.widget || item.widget.type === 'none') {
       return null;
     }
@@ -155,6 +170,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           />
         );
 
+      case 'plinko':
+        return (
+          <PlinkoBonusGame
+            {...item.widget.plinkoProps}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+            onComplete={onPlinkoComplete}
+          />
+        );
+
       default:
         return null;
     }
@@ -164,7 +189,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' ? (
+        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && !isPlinkoActive ? (
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center justify-center p-2 rounded-xl ${
