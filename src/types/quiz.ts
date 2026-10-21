@@ -15,6 +15,7 @@ export type WidgetType =
   | 'colorswatch'
   | 'spatialscene'
   | 'numbersnake'
+  | 'plinko'
   | 'none';
 
 export interface QuizOption {
@@ -124,6 +125,11 @@ export interface NumberSnakeProps {
   onComplete?: () => void;
 }
 
+export interface PlinkoProps {
+  onComplete?: (wellNumber: number) => void;
+  dropPosition?: number; // 0..4
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -138,6 +144,7 @@ export interface WidgetConfig {
   colorSwatchProps?: ColorSwatchProps;
   spatialSceneProps?: SpatialSceneProps;
   numberSnakeProps?: NumberSnakeProps;
+  plinkoProps?: PlinkoProps;
 }
 
 export interface KeypadConfig {

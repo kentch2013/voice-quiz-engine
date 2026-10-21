@@ -32,6 +32,9 @@ export function useGameEngine() {
   // Expired answer display state
   const [showExpiredAnswer, setShowExpiredAnswer] = useState<boolean>(false);
 
+  // Plinko bonus game state for Number Bonds to 10 question chaining
+  const [isPlinkoActive, setIsPlinkoActive] = useState<boolean>(false);
+
   const [attemptsCount, setAttemptsCount] = useState<number>(0);
   const [keypadInput, setKeypadInput] = useState<string>('');
   const [session, setSession] = useState<GameSession | null>(null);
@@ -202,11 +205,66 @@ export function useGameEngine() {
         setTimeout(() => {
           advanceToNext();
         }, 3000);
+      } else if (isCorrect && currentItem.topicId === 'number-bonds-10' && currentIndex + 1 < quizItems.length) {
+        // Trigger Plinko minigame for Number Bonds to 10
+        setIsPlinkoActive(true);
       } else {
         advanceToNext();
       }
     },
     [currentItem, status, attemptsCount, results, currentIndex, quizItems.length]
+  );
+
+  // Plinko bonus game completion handler to chain next starting operand N (1..9)
+  const handlePlinkoComplete = useCallback(
+    (wellNumber: number) => {
+      setIsPlinkoActive(false);
+
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < quizItems.length) {
+        const operandN = Math.max(1, Math.min(9, wellNumber));
+        const missingAddend = 10 - operandN;
+
+        setQuizItems((prevItems) => {
+          const updated = [...prevItems];
+          updated[nextIndex] = {
+            ...updated[nextIndex],
+            operandA: operandN,
+            operandB: missingAddend,
+            expectedAnswer: missingAddend,
+            acceptableAnswers: [missingAddend, missingAddend.toString()],
+            prompt: `${operandN} + ___ = 10`,
+            ttsPrompt: `${operandN} plus what number equals 10?`,
+            ttsPromptConcise: `${operandN} plus what equals 10`,
+            ttsPromptZh: `${operandN} 加几等于 10?`,
+            ttsPromptZhConcise: `${operandN} 加几等于 10`,
+            widget: {
+              type: 'tenframe',
+              tenFrameProps: {
+                count: operandN,
+                total: 10,
+              },
+            },
+          };
+          return updated;
+        });
+
+        resetTranscriptRef.current();
+        setKeypadInput('');
+        setAttemptsCount(0);
+        setShowSilenceNudge(false);
+        setShowExpiredAnswer(false);
+        silenceTimeRef.current = 0;
+        isTransitioningRef.current = false;
+
+        setCurrentIndex(nextIndex);
+        setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+        questionStartTimeRef.current = Date.now();
+      } else {
+        finishGameRef.current(resultsRef.current);
+      }
+    },
+    [currentIndex, quizItems.length]
   );
 
   const submitAnswerRef = useRef(submitAnswer);
@@ -232,6 +290,7 @@ export function useGameEngine() {
     setQuestionTimeLeft(QUESTION_TIME_LIMIT);
     setShowSilenceNudge(false);
     setShowExpiredAnswer(false);
+    setIsPlinkoActive(false);
     silenceTimeRef.current = 0;
     setAttemptsCount(0);
     setKeypadInput('');
@@ -386,6 +445,7 @@ export function useGameEngine() {
     questionTimeLeft,
     showSilenceNudge,
     showExpiredAnswer,
+    isPlinkoActive,
     restartCountdown,
     keypadInput,
     setKeypadInput,
@@ -399,6 +459,7 @@ export function useGameEngine() {
     submitAnswer,
     reportTargetEaten,
     handleSnakeComplete,
+    handlePlinkoComplete,
     returnToLobby,
   };
 }

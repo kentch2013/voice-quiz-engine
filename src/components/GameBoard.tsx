@@ -14,12 +14,14 @@ import { SvgCoin } from './widgets/SvgCoin';
 import { SvgEquationCard } from './widgets/SvgEquationCard';
 import { SvgSpatialScene } from './widgets/SvgSpatialScene';
 import { NumberSnakeGame } from './widgets/NumberSnakeGame';
+import { PlinkoBonusGame } from './widgets/PlinkoBonusGame';
 
 interface GameBoardProps {
   item: QuizItem;
   timeLeft: number;
   showSilenceNudge: boolean;
   showExpiredAnswer?: boolean;
+  isPlinkoActive?: boolean;
   questionIndex?: number;
   transcript: string;
   interimTranscript: string;
@@ -33,6 +35,7 @@ interface GameBoardProps {
   onReadAloud?: () => void;
   onEatTarget?: (targetValue: number, eatenCount: number) => void;
   onSnakeComplete?: () => void;
+  onPlinkoComplete?: (wellNumber: number) => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -40,6 +43,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   timeLeft,
   showSilenceNudge,
   showExpiredAnswer = false,
+  isPlinkoActive = false,
   questionIndex,
   transcript,
   interimTranscript,
@@ -53,10 +57,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onReadAloud,
   onEatTarget,
   onSnakeComplete,
+  onPlinkoComplete,
 }) => {
   const currentDisplayedTranscript = interimTranscript || transcript;
 
   const renderWidget = () => {
+    if (isPlinkoActive) {
+      return (
+        <PlinkoBonusGame
+          transcript={transcript}
+          interimTranscript={interimTranscript}
+          onComplete={onPlinkoComplete}
+        />
+      );
+    }
+
     if (!item.widget || item.widget.type === 'none') {
       return null;
     }
@@ -134,6 +149,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 value: 'completed',
               });
             }}
+          />
+        );
+
+      case 'plinko':
+        return (
+          <PlinkoBonusGame
+            {...item.widget.plinkoProps}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+            onComplete={onPlinkoComplete}
           />
         );
 
