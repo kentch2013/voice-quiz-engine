@@ -141,4 +141,32 @@ describe('NumberSnakeGame Component', () => {
     expect(screen.getByText(/Eaten: 0 \/ 10/i)).toBeDefined();
     expect(screen.getByText('3')).toBeDefined(); // 3 was the minimum in initialNumbers
   });
+
+  it('matches fuzzy and acoustically similar words to directional commands', () => {
+    // RIGHT candidates: rat, rite, rot, light, ride
+    expect(extractVoiceDirections('rat rite rot light ride')).toEqual([
+      'RIGHT',
+      'RIGHT',
+      'RIGHT',
+      'RIGHT',
+      'RIGHT',
+    ]);
+
+    // LEFT candidates: laugh, lift, let
+    expect(extractVoiceDirections('laugh lift let')).toEqual(['LEFT', 'LEFT', 'LEFT']);
+
+    // DOWN candidates: dawn, dan, dome, town
+    expect(extractVoiceDirections('dawn dan dome town')).toEqual([
+      'DOWN',
+      'DOWN',
+      'DOWN',
+      'DOWN',
+    ]);
+
+    // UP candidates: app, cup, pup
+    expect(extractVoiceDirections('app cup pup')).toEqual(['UP', 'UP', 'UP']);
+
+    // Ignores completely unrelated words
+    expect(extractVoiceDirections('apple banana elephant')).toEqual([]);
+  });
 });
