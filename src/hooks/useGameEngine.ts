@@ -205,9 +205,6 @@ export function useGameEngine() {
         setTimeout(() => {
           advanceToNext();
         }, 3000);
-      } else if (isCorrect && currentItem.topicId === 'number-bonds-10' && currentIndex + 1 < quizItems.length) {
-        // Trigger Plinko minigame for Number Bonds to 10
-        setIsPlinkoActive(true);
       } else {
         advanceToNext();
       }
@@ -220,15 +217,14 @@ export function useGameEngine() {
     (wellNumber: number) => {
       setIsPlinkoActive(false);
 
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < quizItems.length) {
-        const operandN = Math.max(1, Math.min(9, wellNumber));
-        const missingAddend = 10 - operandN;
+      const operandN = Math.max(1, Math.min(9, wellNumber));
+      const missingAddend = 10 - operandN;
 
-        setQuizItems((prevItems) => {
-          const updated = [...prevItems];
-          updated[nextIndex] = {
-            ...updated[nextIndex],
+      setQuizItems((prevItems) => {
+        const updated = [...prevItems];
+        if (currentIndex < updated.length) {
+          updated[currentIndex] = {
+            ...updated[currentIndex],
             operandA: operandN,
             operandB: missingAddend,
             expectedAnswer: missingAddend,
@@ -239,32 +235,23 @@ export function useGameEngine() {
             ttsPromptZh: `${operandN} 加几等于 10?`,
             ttsPromptZhConcise: `${operandN} 加几等于 10`,
             widget: {
-              type: 'tenframe',
-              tenFrameProps: {
-                count: operandN,
-                total: 10,
-              },
+              type: 'plinko',
+              plinkoProps: {},
             },
           };
-          return updated;
-        });
+        }
+        return updated;
+      });
 
-        resetTranscriptRef.current();
-        setKeypadInput('');
-        setAttemptsCount(0);
-        setShowSilenceNudge(false);
-        setShowExpiredAnswer(false);
-        silenceTimeRef.current = 0;
-        isTransitioningRef.current = false;
-
-        setCurrentIndex(nextIndex);
-        setQuestionTimeLeft(QUESTION_TIME_LIMIT);
-        questionStartTimeRef.current = Date.now();
-      } else {
-        finishGameRef.current(resultsRef.current);
-      }
+      resetTranscriptRef.current();
+      setKeypadInput('');
+      setAttemptsCount(0);
+      setShowSilenceNudge(false);
+      setShowExpiredAnswer(false);
+      silenceTimeRef.current = 0;
+      isTransitioningRef.current = false;
     },
-    [currentIndex, quizItems.length]
+    [currentIndex]
   );
 
   const submitAnswerRef = useRef(submitAnswer);

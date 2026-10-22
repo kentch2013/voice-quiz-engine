@@ -119,9 +119,9 @@ export function App() {
                   onPlinkoComplete={handlePlinkoComplete}
                 />
 
-                {!isPlinkoActive && (
+                {currentItem.keypad?.type && currentItem.keypad.type !== 'none' && (
                   <AdaptiveKeypad
-                    type={currentItem.keypad?.type || 'numeric'}
+                    type={currentItem.keypad.type}
                     options={currentItem.keypad?.options || []}
                     value={keypadInput}
                     onKeyPress={handleKeypadKeyPress}

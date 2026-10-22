@@ -47,13 +47,18 @@ describe('PlinkoBonusGame Component', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders interactive control buttons and header correctly', () => {
+  it('renders interactive control buttons, header, and randomized well numbers 1 through 9', () => {
     render(<PlinkoBonusGame />);
 
     expect(screen.getByText(/Plinko Number Bond Bonus!/i)).toBeDefined();
     expect(screen.getByRole('button', { name: /Move Slot Left/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Drop Plinko Ball/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Move Slot Right/i })).toBeDefined();
+
+    // Verify all well numbers 1 through 9 are present
+    for (let num = 1; num <= 9; num++) {
+      expect(screen.getAllByText(num.toString()).length).toBeGreaterThan(0);
+    }
   });
 
   it('handles slot selector movement via Left and Right buttons', () => {
@@ -73,9 +78,9 @@ describe('PlinkoBonusGame Component', () => {
     expect(leftBtn).toBeDefined();
   });
 
-  it('triggers ball drop physics simulation and calls onComplete with well number', async () => {
+  it('triggers ball drop physics simulation with enlarged ball radius (15) and calls onComplete with well number', async () => {
     const onComplete = vi.fn();
-    render(<PlinkoBonusGame onComplete={onComplete} />);
+    const { container } = render(<PlinkoBonusGame onComplete={onComplete} />);
 
     const dropBtn = screen.getByRole('button', { name: /Drop Plinko Ball/i });
 
@@ -83,8 +88,13 @@ describe('PlinkoBonusGame Component', () => {
       fireEvent.click(dropBtn);
     });
 
+    // Verify ball circle is rendered with enlarged radius = 15
+    const ballCircle = container.querySelector('circle[fill="url(#ballGrad)"]');
+    expect(ballCircle).toBeDefined();
+    expect(ballCircle?.getAttribute('r')).toBe('15');
+
     // Advance physics simulation frames
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 400; i++) {
       act(() => {
         vi.advanceTimersByTime(16);
       });

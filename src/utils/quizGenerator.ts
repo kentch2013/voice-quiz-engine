@@ -323,7 +323,7 @@ function generateSingleDigitSubtractionItems(gradeBand: GradeBand, count: number
 function generateNumberBonds10Items(gradeBand: GradeBand, count: number): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
-    const givenAddend = Math.floor(Math.random() * 11);
+    const givenAddend = Math.floor(Math.random() * 9) + 1;
     const missingAddend = 10 - givenAddend;
 
     items.push({
