@@ -139,6 +139,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       case 'numbersnake':
         return (
           <NumberSnakeGame
+            key={item.id}
             {...item.widget.numberSnakeProps}
             transcript={transcript}
             interimTranscript={interimTranscript}
@@ -157,6 +158,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       case 'letterhero':
         return (
           <LetterHeroGame
+            key={item.id}
             {...item.widget.letterHeroProps}
             transcript={transcript}
             interimTranscript={interimTranscript}

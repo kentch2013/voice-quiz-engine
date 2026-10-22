@@ -90,10 +90,37 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
   activeLettersRef.current = activeLetters;
 
   const lastProcessedSpeechRef = useRef<string>('');
+  const lastLaneRef = useRef<number | null>(null);
+  const hasCompletedRef = useRef<boolean>(false);
+
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
   const onScoreUpdateRef = useRef(onScoreUpdate);
   onScoreUpdateRef.current = onScoreUpdate;
+
+  // Cleanup active letters on unmount
+  useEffect(() => {
+    return () => {
+      setActiveLetters([]);
+      activeLettersRef.current = [];
+    };
+  }, []);
+
+  // Reset state if targetLetters changes
+  useEffect(() => {
+    setActiveLetters([]);
+    activeLettersRef.current = [];
+    setSpawnIndex(0);
+    setProcessedCount(0);
+    setScore(0);
+    setPerfectCount(0);
+    setGoodCount(0);
+    setMissCount(0);
+    setIsCompleted(false);
+    setRecentRating(null);
+    hasCompletedRef.current = false;
+    lastLaneRef.current = null;
+  }, [targetLetters]);
 
   // Animation frame loop for smooth rendering of falling letters
   useEffect(() => {
@@ -111,47 +138,37 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
     };
   }, [isCompleted]);
 
-  // 1. Spawner interval (spawns 1 letter every 4 seconds up to targetLetters.length)
+  // 1. Spawner: spawns next letter when current letter is resolved (hit/missed) or nearing completion (progress >= 80%).
   useEffect(() => {
     if (isCompleted) return;
 
-    // Spawn initial letter at t=0 if not started
-    if (spawnIndex === 0 && activeLetters.length === 0 && processedCount === 0) {
-      const firstLetter = targetLetters[0];
-      const lane = LANES[Math.floor(Math.random() * LANES.length)];
+    const currentActive = activeLettersRef.current;
+    const isNearingCompletion = currentActive.length > 0 &&
+      ((now - currentActive[currentActive.length - 1].spawnTime) / FALL_DURATION_MS) * 100 >= 80;
+
+    const shouldSpawn =
+      (currentActive.length === 0 || isNearingCompletion) &&
+      spawnIndex < targetLetters.length &&
+      processedCount < targetLetters.length;
+
+    if (shouldSpawn) {
+      const availableLanes = LANES.filter((lane) => lane !== lastLaneRef.current);
+      const lane = availableLanes[Math.floor(Math.random() * availableLanes.length)] || LANES[0];
+      lastLaneRef.current = lane;
+
+      const nextLetter = targetLetters[spawnIndex];
       const newItem: FallingLetterItem = {
-        id: `falling-0-${Date.now()}`,
-        letter: firstLetter,
+        id: `falling-${spawnIndex}-${Date.now()}`,
+        letter: nextLetter,
         spawnTime: Date.now(),
         lane,
       };
-      setActiveLetters([newItem]);
-      setSpawnIndex(1);
+
+      setActiveLetters((prev) => [...prev, newItem]);
+      activeLettersRef.current = [...currentActive, newItem];
+      setSpawnIndex((prev) => prev + 1);
     }
-
-    const timer = setInterval(() => {
-      setSpawnIndex((prevIndex) => {
-        if (prevIndex >= targetLetters.length) {
-          clearInterval(timer);
-          return prevIndex;
-        }
-
-        const nextLetter = targetLetters[prevIndex];
-        const lane = LANES[Math.floor(Math.random() * LANES.length)];
-        const newItem: FallingLetterItem = {
-          id: `falling-${prevIndex}-${Date.now()}`,
-          letter: nextLetter,
-          spawnTime: Date.now(),
-          lane,
-        };
-
-        setActiveLetters((prev) => [...prev, newItem]);
-        return prevIndex + 1;
-      });
-    }, SPAWN_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [spawnIndex, targetLetters, isCompleted, activeLetters.length, processedCount]);
+  }, [now, activeLetters.length, spawnIndex, targetLetters, isCompleted, processedCount]);
 
   // 2. Check for miss expiration on frame updates
   useEffect(() => {
@@ -161,14 +178,11 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
     if (currentActive.length === 0) return;
 
     const expiredItems: FallingLetterItem[] = [];
-    const remainingItems: FallingLetterItem[] = [];
 
     for (const item of currentActive) {
       const progress = ((now - item.spawnTime) / FALL_DURATION_MS) * 100;
       if (progress >= 100) {
         expiredItems.push(item);
-      } else {
-        remainingItems.push(item);
       }
     }
 
@@ -186,6 +200,9 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
           onScoreUpdateRef.current(0, 'Miss');
         }
       }
+      const remainingItems = currentActive.filter(
+        (item) => ((now - item.spawnTime) / FALL_DURATION_MS) * 100 < 100
+      );
       setActiveLetters(remainingItems);
       activeLettersRef.current = remainingItems;
       setProcessedCount((p) => p + expiredItems.length);
@@ -196,8 +213,11 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
   useEffect(() => {
     if (isCompleted) return;
 
-    if (processedCount >= targetLetters.length) {
+    if (processedCount >= targetLetters.length && targetLetters.length > 0) {
       setIsCompleted(true);
+      setActiveLetters([]);
+      activeLettersRef.current = [];
+
       try {
         confetti({
           particleCount: 120,
@@ -207,7 +227,9 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
       } catch {
         // ignore in test envs
       }
-      if (onCompleteRef.current) {
+
+      if (onCompleteRef.current && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
         const cb = onCompleteRef.current;
         setTimeout(() => cb(), 1500);
       }

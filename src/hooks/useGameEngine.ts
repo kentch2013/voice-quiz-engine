@@ -290,7 +290,8 @@ export function useGameEngine() {
 
   // Start new game session
   const startGame = useCallback(() => {
-    const items = generateQuizItems(selectedTopicId, selectedGradeBand, 10);
+    const itemCount = selectedTopicId === 'letter-identification' ? 1 : 10;
+    const items = generateQuizItems(selectedTopicId, selectedGradeBand, itemCount);
     setQuizItems(items);
     setCurrentIndex(0);
     setResults([]);
@@ -397,8 +398,11 @@ export function useGameEngine() {
   useEffect(() => {
     if (status !== 'playing') return;
 
-    // Snake game continuous play mode: bypass 30s question timer
-    if (currentItem?.widget?.type === 'numbersnake') return;
+    // Snake & Letter Hero continuous play mode: bypass 30s question timer
+    if (
+      currentItem?.widget?.type === 'numbersnake' ||
+      currentItem?.widget?.type === 'letterhero'
+    ) return;
 
     const timer = setInterval(() => {
       if (isTransitioningRef.current) return;
