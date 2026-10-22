@@ -1,0 +1,568 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import confetti from 'canvas-confetti';
+import { ArrowLeft, ArrowRight, Zap, Sparkles } from 'lucide-react';
+import type { BubbleShooterProps } from '../../types/quiz';
+import { playCorrectChime, playWrongSound } from '../../utils/audioSynthesizer';
+
+export interface BubbleShooterGameProps extends BubbleShooterProps {
+  transcript?: string;
+  interimTranscript?: string;
+  onComplete?: () => void;
+  targetTriplesCount?: number;
+}
+
+export interface HexCoord {
+  r: number; // row: 0 to NUM_ROWS - 1
+  c: number; // col: 0 to 5 (even rows) or 0 to 4 (odd rows)
+}
+
+export interface BubbleNode {
+  id: string;
+  r: number;
+  c: number;
+  value: number;
+}
+
+export const NUM_ROWS = 8;
+export const EVEN_COLS = 6;
+export const ODD_COLS = 5;
+export const TARGET_TRIPLES = 5;
+
+/**
+ * Get valid neighbor coordinates for a cell (r, c) on alternating 6/5 hex grid.
+ */
+export function getHexNeighbors(r: number, c: number): HexCoord[] {
+  const isEven = r % 2 === 0;
+  const maxCols = isEven ? EVEN_COLS : ODD_COLS;
+
+  if (r < 0 || r >= NUM_ROWS || c < 0 || c >= maxCols) {
+    return [];
+  }
+
+  const candidates: HexCoord[] = [];
+
+  // Same row: left and right
+  if (c > 0) candidates.push({ r, c: c - 1 });
+  if (c < maxCols - 1) candidates.push({ r, c: c + 1 });
+
+  // Adjacent rows (top: r - 1, bottom: r + 1)
+  const adjRows = [r - 1, r + 1].filter((row) => row >= 0 && row < NUM_ROWS);
+
+  for (const adjR of adjRows) {
+    if (isEven) {
+      // Even row (6 cols) connects to Odd row (5 cols):
+      // (r, c) connects to (adjR, c - 1) and (adjR, c)
+      if (c - 1 >= 0) candidates.push({ r: adjR, c: c - 1 });
+      if (c < ODD_COLS) candidates.push({ r: adjR, c });
+    } else {
+      // Odd row (5 cols) connects to Even row (6 cols):
+      // (r, c) connects to (adjR, c) and (adjR, c + 1)
+      if (c < EVEN_COLS) candidates.push({ r: adjR, c });
+      if (c + 1 < EVEN_COLS) candidates.push({ r: adjR, c: c + 1 });
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * String key for hex coordinate.
+ */
+export function coordKey(r: number, c: number): string {
+  return `${r},${c}`;
+}
+
+/**
+ * Check if 3 numbers satisfy n1 + n2 === n3 when sorted ascending.
+ */
+export function isValidSumTriple(v1: number, v2: number, v3: number): boolean {
+  const [n1, n2, n3] = [v1, v2, v3].sort((a, b) => a - b);
+  return n1 + n2 === n3;
+}
+
+/**
+ * Find all triangles of 3 mutually adjacent bubbles on the grid that contain target (r, c).
+ */
+export function findTrianglesContaining(
+  board: Map<string, BubbleNode>,
+  targetR: number,
+  targetC: number
+): { coords: HexCoord[]; values: number[] }[] {
+  const targetKey = coordKey(targetR, targetC);
+  const targetNode = board.get(targetKey);
+  if (!targetNode) return [];
+
+  const neighbors = getHexNeighbors(targetR, targetC);
+  const occupiedNeighbors = neighbors.filter((n) => board.has(coordKey(n.r, n.c)));
+
+  const triangles: { coords: HexCoord[]; values: number[] }[] = [];
+
+  for (let i = 0; i < occupiedNeighbors.length; i++) {
+    for (let j = i + 1; j < occupiedNeighbors.length; j++) {
+      const n1 = occupiedNeighbors[i];
+      const n2 = occupiedNeighbors[j];
+
+      // Check if n1 and n2 are adjacent to each other
+      const n1Neighbors = getHexNeighbors(n1.r, n1.c);
+      const isMutuallyAdjacent = n1Neighbors.some((n) => n.r === n2.r && n.c === n2.c);
+
+      if (isMutuallyAdjacent) {
+        const node1 = board.get(coordKey(n1.r, n1.c))!;
+        const node2 = board.get(coordKey(n2.r, n2.c))!;
+        triangles.push({
+          coords: [
+            { r: targetR, c: targetC },
+            { r: n1.r, c: n1.c },
+            { r: n2.r, c: n2.c },
+          ],
+          values: [targetNode.value, node1.value, node2.value],
+        });
+      }
+    }
+  }
+
+  return triangles;
+}
+
+/**
+ * Check if entire board contains any sum triples.
+ */
+export function hasAnySumTriple(board: Map<string, BubbleNode>): boolean {
+  for (const node of board.values()) {
+    const triangles = findTrianglesContaining(board, node.r, node.c);
+    for (const tri of triangles) {
+      if (isValidSumTriple(tri.values[0], tri.values[1], tri.values[2])) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Find floating bubbles not attached to top row (r = 0).
+ */
+export function findFloatingBubbles(board: Map<string, BubbleNode>): HexCoord[] {
+  const visited = new Set<string>();
+  const queue: HexCoord[] = [];
+
+  // Start BFS from all occupied nodes in Row 0
+  for (let c = 0; c < EVEN_COLS; c++) {
+    const key = coordKey(0, c);
+    if (board.has(key)) {
+      visited.add(key);
+      queue.push({ r: 0, c });
+    }
+  }
+
+  while (queue.length > 0) {
+    const curr = queue.shift()!;
+    const neighbors = getHexNeighbors(curr.r, curr.c);
+    for (const n of neighbors) {
+      const key = coordKey(n.r, n.c);
+      if (board.has(key) && !visited.has(key)) {
+        visited.add(key);
+        queue.push(n);
+      }
+    }
+  }
+
+  const floating: HexCoord[] = [];
+  for (const node of board.values()) {
+    const key = coordKey(node.r, node.c);
+    if (!visited.has(key)) {
+      floating.push({ r: node.r, c: node.c });
+    }
+  }
+
+  return floating;
+}
+
+/**
+ * Find all valid open hex target positions where a shot bubble can land.
+ */
+export function getCandidateOpenPositions(board: Map<string, BubbleNode>): HexCoord[] {
+  if (board.size === 0) {
+    // Top row open slots
+    return Array.from({ length: EVEN_COLS }, (_, c) => ({ r: 0, c }));
+  }
+
+  const candidatesSet = new Set<string>();
+  for (const node of board.values()) {
+    const neighbors = getHexNeighbors(node.r, node.c);
+    for (const n of neighbors) {
+      const key = coordKey(n.r, n.c);
+      if (!board.has(key)) {
+        candidatesSet.add(key);
+      }
+    }
+  }
+
+  const candidates: HexCoord[] = Array.from(candidatesSet).map((key) => {
+    const [r, c] = key.split(',').map(Number);
+    return { r, c };
+  });
+
+  // Sort candidate hex positions visually from left to right, then top to bottom
+  candidates.sort((a, b) => {
+    const isAEven = a.r % 2 === 0;
+    const isBEven = b.r % 2 === 0;
+    const aX = a.c + (isAEven ? 0 : 0.5);
+    const bX = b.c + (isBEven ? 0 : 0.5);
+
+    if (Math.abs(aX - bX) > 0.01) return aX - bX;
+    return a.r - b.r;
+  });
+
+  return candidates;
+}
+
+/**
+ * Generate initial pre-filled board (Row 0: 6, Row 1: 5, Row 2: 6 = 17 bubbles)
+ * ensuring strictly integers 1..10 and NO pre-existing triples.
+ */
+export function createInitialBoard(): Map<string, BubbleNode> {
+  let board = new Map<string, BubbleNode>();
+  let attempts = 0;
+
+  while (attempts < 200) {
+    attempts++;
+    board.clear();
+
+    const fillRow = (r: number, cols: number) => {
+      for (let c = 0; c < cols; c++) {
+        const val = Math.floor(Math.random() * 10) + 1; // 1..10
+        const id = `initial-${r}-${c}`;
+        board.set(coordKey(r, c), { id, r, c, value: val });
+      }
+    };
+
+    fillRow(0, EVEN_COLS);
+    fillRow(1, ODD_COLS);
+    fillRow(2, EVEN_COLS);
+
+    if (!hasAnySumTriple(board)) {
+      return board;
+    }
+  }
+
+  // Fallback: guaranteed safe initial board without sum triples
+  board.clear();
+  const safeVals = [
+    [1, 1, 1, 1, 1, 1], // Row 0: 1+1!=1
+    [1, 1, 1, 1, 1],    // Row 1
+    [1, 1, 1, 1, 1, 1], // Row 2
+  ];
+
+  safeVals[0].forEach((v, c) => board.set(coordKey(0, c), { id: `s-0-${c}`, r: 0, c, value: v }));
+  safeVals[1].forEach((v, c) => board.set(coordKey(1, c), { id: `s-1-${c}`, r: 1, c, value: v }));
+  safeVals[2].forEach((v, c) => board.set(coordKey(2, c), { id: `s-2-${c}`, r: 2, c, value: v }));
+
+  return board;
+}
+
+/**
+ * Parse verbal voice commands for shooter controls.
+ */
+export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
+  if (!text) return null;
+  const normalized = text.toLowerCase().trim();
+
+  if (
+    normalized.includes('left') ||
+    normalized.includes('向左') ||
+    normalized.includes('左')
+  ) {
+    return 'LEFT';
+  }
+
+  if (
+    normalized.includes('right') ||
+    normalized.includes('向右') ||
+    normalized.includes('右')
+  ) {
+    return 'RIGHT';
+  }
+
+  if (
+    normalized.includes('shoot') ||
+    normalized.includes('fire') ||
+    normalized.includes('shot') ||
+    normalized.includes('go') ||
+    normalized.includes('launch') ||
+    normalized.includes('bang') ||
+    normalized.includes('发射') ||
+    normalized.includes('开火')
+  ) {
+    return 'FIRE';
+  }
+
+  return null;
+}
+
+export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
+  transcript = '',
+  interimTranscript = '',
+  onComplete,
+  targetTriplesCount = TARGET_TRIPLES,
+}) => {
+  const [board, setBoard] = useState<Map<string, BubbleNode>>(() => createInitialBoard());
+  const [clearedTriples, setClearedTriples] = useState<number>(0);
+  const [nextBubbleValue, setNextBubbleValue] = useState<number>(() => Math.floor(Math.random() * 10) + 1);
+  const [aimIndex, setAimIndex] = useState<number>(0);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  const processedVoiceRef = useRef<string>('');
+  const boardRef = useRef(board);
+  boardRef.current = board;
+
+  const candidatePositions = useMemo(() => getCandidateOpenPositions(board), [board]);
+
+  // Keep aim index bounded when candidate positions change
+  useEffect(() => {
+    if (candidatePositions.length > 0 && aimIndex >= candidatePositions.length) {
+      setAimIndex(candidatePositions.length - 1);
+    }
+  }, [candidatePositions, aimIndex]);
+
+  const handleAimLeft = useCallback(() => {
+    setAimIndex((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const handleAimRight = useCallback(() => {
+    setAimIndex((prev) => Math.min(candidatePositions.length - 1, prev + 1));
+  }, [candidatePositions.length]);
+
+  const handleShoot = useCallback(() => {
+    if (isCompleted || candidatePositions.length === 0) return;
+
+    const targetPos = candidatePositions[aimIndex] || candidatePositions[0];
+    if (!targetPos) return;
+
+    const currentVal = nextBubbleValue;
+    const newBubble: BubbleNode = {
+      id: `bubble-${Date.now()}`,
+      r: targetPos.r,
+      c: targetPos.c,
+      value: currentVal,
+    };
+
+    const newBoard = new Map(boardRef.current);
+    newBoard.set(coordKey(targetPos.r, targetPos.c), newBubble);
+
+    // Check for matching triples containing the newly snapped bubble
+    const triangles = findTrianglesContaining(newBoard, targetPos.r, targetPos.c);
+    const matchedTriangles = triangles.filter((tri) =>
+      isValidSumTriple(tri.values[0], tri.values[1], tri.values[2])
+    );
+
+    if (matchedTriangles.length > 0) {
+      playCorrectChime();
+      const popCoordsSet = new Set<string>();
+      matchedTriangles.forEach((tri) => {
+        tri.coords.forEach((c) => popCoordsSet.add(coordKey(c.r, c.c)));
+      });
+
+      // Pop matched bubbles
+      popCoordsSet.forEach((key) => newBoard.delete(key));
+
+      // Gravity / Floating check: drop unanchored bubbles
+      const floatingCoords = findFloatingBubbles(newBoard);
+      floatingCoords.forEach((c) => newBoard.delete(coordKey(c.r, c.c)));
+
+      const triplesMatchedCount = matchedTriangles.length;
+      setClearedTriples((prev) => {
+        const nextTotal = prev + triplesMatchedCount;
+        if (nextTotal >= targetTriplesCount || newBoard.size === 0) {
+          setIsCompleted(true);
+          try {
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          } catch {
+            // Ignore if confetti unavailable in test env
+          }
+          setTimeout(() => onComplete?.(), 1500);
+        }
+        return nextTotal;
+      });
+
+      setFeedbackMsg(`💥 Number Fact Matched! (+${triplesMatchedCount})`);
+      setTimeout(() => setFeedbackMsg(null), 1500);
+    } else {
+      playWrongSound();
+    }
+
+    setBoard(newBoard);
+    // Generate next bubble value 1..10
+    setNextBubbleValue(Math.floor(Math.random() * 10) + 1);
+  }, [isCompleted, candidatePositions, aimIndex, nextBubbleValue, targetTriplesCount, onComplete]);
+
+  // Voice transcript control handler
+  useEffect(() => {
+    const combined = `${transcript} ${interimTranscript}`.trim();
+    if (!combined || combined === processedVoiceRef.current) return;
+
+    const action = parseVoiceAction(combined);
+    if (action) {
+      processedVoiceRef.current = combined;
+      if (action === 'LEFT') handleAimLeft();
+      else if (action === 'RIGHT') handleAimRight();
+      else if (action === 'FIRE') handleShoot();
+    }
+  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleShoot]);
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          handleAimLeft();
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          handleAimRight();
+          break;
+        case 'ArrowUp':
+        case ' ':
+        case 'Enter':
+        case 'w':
+        case 'W':
+          e.preventDefault();
+          handleShoot();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleAimLeft, handleAimRight, handleShoot]);
+
+  const currentTargetPos = candidatePositions[aimIndex];
+
+  return (
+    <div className="w-full max-w-xl mx-auto flex flex-col items-center select-none">
+      {/* Objective & Progress Banner */}
+      <div className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-4 text-white shadow-lg mb-4 text-center border-2 border-indigo-200">
+        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+          <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
+            🎯 Match Triples ($n_1 + n_2 = n_3$)
+          </div>
+          <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl font-black text-xs sm:text-sm">
+            Triples Cleared: {clearedTriples} / {targetTriplesCount}
+          </div>
+        </div>
+
+        {feedbackMsg && (
+          <div className="mt-2 text-xs sm:text-sm font-extrabold text-amber-200 animate-bounce">
+            {feedbackMsg}
+          </div>
+        )}
+      </div>
+
+      {/* Hex Grid Board Area */}
+      <div className="relative bg-slate-900 rounded-2xl p-4 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full max-w-[500px]">
+        <div className="flex flex-col gap-2 items-center">
+          {Array.from({ length: NUM_ROWS }).map((_, r) => {
+            const isEven = r % 2 === 0;
+            const colsCount = isEven ? EVEN_COLS : ODD_COLS;
+
+            return (
+              <div
+                key={`row-${r}`}
+                className={`flex gap-2 justify-center ${
+                  isEven ? 'w-full' : 'w-[90%]'
+                }`}
+              >
+                {Array.from({ length: colsCount }).map((_, c) => {
+                  const key = coordKey(r, c);
+                  const node = board.get(key);
+                  const isTarget =
+                    currentTargetPos &&
+                    currentTargetPos.r === r &&
+                    currentTargetPos.c === c;
+
+                  return (
+                    <div
+                      key={key}
+                      className={`relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full font-black text-base sm:text-lg transition-all duration-200 ${
+                        node
+                          ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-md border-2 border-indigo-300 scale-100'
+                          : isTarget
+                          ? 'bg-amber-400/30 border-2 border-dashed border-amber-400 text-amber-300 animate-pulse'
+                          : 'bg-slate-800/40 border border-slate-700/50'
+                      }`}
+                    >
+                      {node ? node.value : isTarget ? '?' : ''}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Celebration Overlay */}
+        {isCompleted && (
+          <div className="absolute inset-0 bg-indigo-900/90 backdrop-blur-sm flex flex-col items-center justify-center text-white p-6 rounded-2xl animate-fade-in z-20">
+            <Sparkles size={64} className="text-amber-400 animate-spin mb-3" />
+            <h2 className="text-2xl sm:text-3xl font-black text-amber-300 mb-1">
+              🎉 Round Complete!
+            </h2>
+            <p className="text-sm text-indigo-100 font-bold">
+              You cleared {clearedTriples} number fact triples!
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Shooter Launcher & Aim Controls */}
+      <div className="mt-4 w-full flex flex-col items-center gap-3">
+        {/* Next Shooter Bubble Preview */}
+        <div className="flex items-center gap-3 bg-slate-800 text-white px-5 py-2.5 rounded-2xl border-2 border-indigo-400 shadow-lg">
+          <span className="text-xs font-extrabold uppercase tracking-widest text-indigo-300">
+            Next Bubble:
+          </span>
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-black text-lg flex items-center justify-center border-2 border-white shadow-md animate-bounce">
+            {nextBubbleValue}
+          </div>
+        </div>
+
+        {/* Interactive Controls (Left / Shoot / Right) */}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={handleAimLeft}
+            aria-label="Aim Left"
+            className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-2xl flex items-center gap-1 shadow-md border-b-4 border-indigo-900 cursor-pointer transition-transform active:scale-95"
+          >
+            <ArrowLeft size={20} />
+            <span className="hidden sm:inline">Left</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShoot}
+            aria-label="Shoot Bubble"
+            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-black text-lg rounded-2xl flex items-center gap-2 shadow-lg border-b-4 border-emerald-800 cursor-pointer transition-transform active:scale-95"
+          >
+            <Zap size={22} className="fill-current" />
+            <span>SHOOT</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAimRight}
+            aria-label="Aim Right"
+            className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-2xl flex items-center gap-1 shadow-md border-b-4 border-indigo-900 cursor-pointer transition-transform active:scale-95"
+          >
+            <span className="hidden sm:inline">Right</span>
+            <ArrowRight size={20} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
