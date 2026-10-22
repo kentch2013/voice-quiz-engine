@@ -1,9 +1,9 @@
 import type { QuizModule } from '../types';
 import type { GradeBand, QuizItem } from '../../types/quiz';
 
-export function generateSingleDigitAdditionBubbleShooterItem(gradeBand: GradeBand = 'K-1'): QuizItem {
+export function generateSingleDigitAdditionBubbleShooterItem(gradeBand: GradeBand = 'K-1', index: number = 0): QuizItem {
   return {
-    id: `add-bubble-${Date.now()}`,
+    id: `add-bubble-${index}-${Date.now()}`,
     topicId: 'single-digit-addition',
     gradeBand,
     prompt: 'Hex Bubble Shooter Math Game',
@@ -27,8 +27,8 @@ export function generateSingleDigitAdditionBubbleShooterItem(gradeBand: GradeBan
 export function generateSingleDigitAdditionItems(gradeBand: GradeBand = 'K-1', count: number = 10): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
-    if (count >= 10 && i === 0) {
-      items.push(generateSingleDigitAdditionBubbleShooterItem(gradeBand));
+    if (count >= 10) {
+      items.push(generateSingleDigitAdditionBubbleShooterItem(gradeBand, i));
       continue;
     }
 

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import React from 'react';
 import {
   BubbleShooterGame,
   getHexNeighbors,
@@ -11,10 +10,22 @@ import {
   findFloatingBubbles,
   createInitialBoard,
   parseVoiceAction,
+  levenshteinDistance,
   type BubbleNode,
 } from '../BubbleShooterGame';
 
+vi.mock('canvas-confetti', () => ({
+  default: vi.fn(),
+}));
+
 describe('BubbleShooterGame Helper Functions & Logic', () => {
+  it('correctly calculates Levenshtein distance', () => {
+    expect(levenshteinDistance('shot', 'shoot')).toBe(1);
+    expect(levenshteinDistance('right', 'rite')).toBe(3);
+    expect(levenshteinDistance('left', 'lift')).toBe(1);
+    expect(levenshteinDistance('same', 'same')).toBe(0);
+  });
+
   it('correctly calculates hex neighbors on alternating 6/5 grid', () => {
     // Row 0 (Even row, 6 cols) cell (0, 0)
     const n00 = getHexNeighbors(0, 0);
@@ -78,19 +89,53 @@ describe('BubbleShooterGame Helper Functions & Logic', () => {
     }
   });
 
-  it('parses verbal voice controls for aiming and shooting', () => {
+  it('parses verbal voice controls for aiming and shooting with homophones and fuzzy matching', () => {
+    // Standard commands
     expect(parseVoiceAction('turn left')).toBe('LEFT');
     expect(parseVoiceAction('aim right')).toBe('RIGHT');
     expect(parseVoiceAction('shoot now')).toBe('FIRE');
     expect(parseVoiceAction('fire!')).toBe('FIRE');
+
+    // Right homophones & phonetic matches
+    expect(parseVoiceAction('light')).toBe('RIGHT');
+    expect(parseVoiceAction('write')).toBe('RIGHT');
+    expect(parseVoiceAction('rite')).toBe('RIGHT');
+    expect(parseVoiceAction('rot')).toBe('RIGHT');
+    expect(parseVoiceAction('white')).toBe('RIGHT');
+    expect(parseVoiceAction('ride')).toBe('RIGHT');
+    expect(parseVoiceAction('r')).toBe('RIGHT');
+    expect(parseVoiceAction('rig')).toBe('RIGHT');
+    expect(parseVoiceAction('you')).toBe('RIGHT');
+
+    // Left homophones & phonetic matches
+    expect(parseVoiceAction('laugh')).toBe('LEFT');
+    expect(parseVoiceAction('lift')).toBe('LEFT');
+    expect(parseVoiceAction('let')).toBe('LEFT');
+    expect(parseVoiceAction('l')).toBe('LEFT');
+    expect(parseVoiceAction('lef')).toBe('LEFT');
+    expect(parseVoiceAction('zuo')).toBe('LEFT');
+
+    // Fire / Shoot homophones & phonetic matches
+    expect(parseVoiceAction('shot')).toBe('FIRE');
+    expect(parseVoiceAction('chute')).toBe('FIRE');
+    expect(parseVoiceAction('shute')).toBe('FIRE');
+    expect(parseVoiceAction('shoo')).toBe('FIRE');
+    expect(parseVoiceAction('fa')).toBe('FIRE');
+    expect(parseVoiceAction('kaihuo')).toBe('FIRE');
+    expect(parseVoiceAction('bang')).toBe('FIRE');
+
+    // Chinese matches
     expect(parseVoiceAction('向左')).toBe('LEFT');
+    expect(parseVoiceAction('向右')).toBe('RIGHT');
     expect(parseVoiceAction('发射')).toBe('FIRE');
+
+    // Invalid input
     expect(parseVoiceAction('hello')).toBeNull();
   });
 });
 
 describe('BubbleShooterGame UI Component', () => {
-  it('renders interactive controls, header, next bubble preview, and hex grid', () => {
+  it('renders interactive controls, header, next bubble preview, hex grid, cannon SVG, and laser aim line', () => {
     render(<BubbleShooterGame targetTriplesCount={5} />);
 
     expect(screen.getByText(/Match Triples/i)).toBeDefined();
@@ -99,6 +144,13 @@ describe('BubbleShooterGame UI Component', () => {
     expect(screen.getByRole('button', { name: /Aim Left/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Shoot Bubble/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Aim Right/i })).toBeDefined();
+
+    // Verify SVG Cannon & Laser trajectory elements
+    expect(screen.getByTestId('bubble-cannon-svg')).toBeDefined();
+    expect(screen.getByTestId('laser-aim-line')).toBeDefined();
+    expect(screen.getByTestId('destination-hex-highlight')).toBeDefined();
+    expect(screen.getByTestId('bubble-cannon-gun')).toBeDefined();
+    expect(screen.getByTestId('cannon-barrel-rotator')).toBeDefined();
   });
 
   it('handles aiming left and right via controls', () => {
@@ -122,15 +174,19 @@ describe('BubbleShooterGame UI Component', () => {
     });
   });
 
-  it('responds to voice transcript input for left, right, and fire', () => {
+  it('responds to voice transcript input for homophones and fuzzy speech commands', () => {
     const { rerender } = render(<BubbleShooterGame transcript="" />);
 
     act(() => {
-      rerender(<BubbleShooterGame transcript="left" />);
+      rerender(<BubbleShooterGame transcript="light" />);
     });
 
     act(() => {
-      rerender(<BubbleShooterGame transcript="shoot" />);
+      rerender(<BubbleShooterGame transcript="laugh" />);
+    });
+
+    act(() => {
+      rerender(<BubbleShooterGame transcript="shot" />);
     });
   });
 });
