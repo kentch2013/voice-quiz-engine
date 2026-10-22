@@ -4,7 +4,6 @@ import { beginningLetterSoundsModule } from './beginningLetterSounds';
 import { rhymeMatchingModule } from './rhymeMatching';
 import { oppositesAntonymsModule } from './oppositesAntonyms';
 import { pluralFormsModule } from './pluralForms';
-import { letterHeroModule } from './letterHero';
 
 export const languageModules = [
   sightWordsModule,
@@ -13,7 +12,6 @@ export const languageModules = [
   rhymeMatchingModule,
   oppositesAntonymsModule,
   pluralFormsModule,
-  letterHeroModule,
 ];
 
 export * from './sightWords';
@@ -22,4 +20,3 @@ export * from './beginningLetterSounds';
 export * from './rhymeMatching';
 export * from './oppositesAntonyms';
 export * from './pluralForms';
-export * from './letterHero';

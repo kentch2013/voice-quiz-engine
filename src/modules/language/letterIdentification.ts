@@ -43,35 +43,39 @@ export function getLetterAcceptableAnswers(letterChar: string): string[] {
   return Array.from(combined);
 }
 
-export function generateLetterIdentificationItems(gradeBand: GradeBand = 'K-1', count: number = 10): QuizItem[] {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+export function generateLetterIdentificationItems(
+  gradeBand: GradeBand = 'K-1',
+  count: number = 10
+): QuizItem[] {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const items: QuizItem[] = [];
 
   for (let i = 0; i < count; i++) {
-    const letter = letters[(i * 3 + 1) % letters.length];
-    const isUpper = letter === letter.toUpperCase();
+    const letterSet: string[] = [];
+    for (let j = 0; j < 10; j++) {
+      const randomIndex = Math.floor(Math.random() * alphabet.length);
+      letterSet.push(alphabet[randomIndex]);
+    }
 
     items.push({
       id: `letter-${i}-${Date.now()}`,
       topicId: 'letter-identification',
       gradeBand,
-      prompt: `What ${isUpper ? 'uppercase' : 'lowercase'} letter is this?`,
-      ttsPrompt: `What letter is this?`,
-      ttsPromptConcise: ``,
-      ttsPromptZh: `这是什么字母?`,
-      ttsPromptZhConcise: ``,
-      expectedAnswer: letter,
-      acceptableAnswers: getLetterAcceptableAnswers(letter),
+      prompt: 'Letter Hero Rhythm Game!',
+      ttsPrompt: 'Say the falling letters as they enter the strike zone!',
+      ttsPromptConcise: 'Say the falling letters!',
+      ttsPromptZh: '在字母进入击打区时说出它们！',
+      ttsPromptZhConcise: '说出掉落的字母！',
+      expectedAnswer: 'completed',
+      acceptableAnswers: ['completed', 'done', 'win', '10'],
       widget: {
-        type: 'flashcard',
-        flashcardProps: {
-          text: letter,
-          category: 'letter',
-          fontSize: '96px',
+        type: 'letterhero',
+        letterHeroProps: {
+          letters: letterSet,
         },
       },
       keypad: {
-        type: 'alphabet',
+        type: 'none',
       },
     });
   }
@@ -83,7 +87,7 @@ export const letterIdentificationModule: QuizModule = {
   topic: {
     id: 'letter-identification',
     title: '🔤 Letter Identification',
-    description: 'Practice uppercase and lowercase letter flashcards.',
+    description: 'Say falling letters when they hit the strike zone!',
     icon: '🔤',
     gradeBands: ['K-1', '2-3'],
   },

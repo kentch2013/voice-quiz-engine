@@ -8,7 +8,6 @@ import {
   rhymeMatchingModule,
   oppositesAntonymsModule,
   pluralFormsModule,
-  letterHeroModule,
   LETTER_SPOKEN_NAMES,
 } from './language';
 import { logicModules } from './logic';
@@ -22,7 +21,6 @@ export const quizRegistry: QuizModule[] = [
   oppositesAntonymsModule,
   pluralFormsModule,
   ...logicModules,
-  letterHeroModule,
 ];
 
 export const TOPICS: Topic[] = quizRegistry.map((m) => m.topic);

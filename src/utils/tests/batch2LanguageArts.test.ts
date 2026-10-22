@@ -12,24 +12,18 @@ describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', ()
   });
 
   describe('letter-identification generator', () => {
-    it('generates valid letter identification items with flashcard widget and alphabet keypad', () => {
+    it('generates valid letter identification items with letterhero widget and none keypad', () => {
       const items = generateQuizItems('letter-identification', 'K-1', 6);
       expect(items).toHaveLength(6);
 
       items.forEach((item) => {
         expect(item.topicId).toBe('letter-identification');
-        expect(item.widget?.type).toBe('flashcard');
-        expect(item.keypad?.type).toBe('alphabet');
-        expect(typeof item.expectedAnswer).toBe('string');
-        expect(item.expectedAnswer).toHaveLength(1);
-
-        const expectedLetter = (item.expectedAnswer as string).toLowerCase();
-        expect(item.acceptableAnswers).toBeDefined();
-        const acceptableLower = item.acceptableAnswers!.map((a) => a.toString().toLowerCase());
-        expect(acceptableLower).toContain(expectedLetter);
-        expect(acceptableLower).toContain(`letter ${expectedLetter}`);
-        expect(item.widget?.flashcardProps?.text).toBe(item.expectedAnswer);
-        expect(item.widget?.flashcardProps?.category).toBe('letter');
+        expect(item.widget?.type).toBe('letterhero');
+        expect(item.widget?.letterHeroProps?.letters).toBeDefined();
+        expect(item.widget?.letterHeroProps?.letters).toHaveLength(10);
+        expect(item.keypad?.type).toBe('none');
+        expect(item.expectedAnswer).toBe('completed');
+        expect(item.acceptableAnswers).toContain('completed');
       });
     });
   });
