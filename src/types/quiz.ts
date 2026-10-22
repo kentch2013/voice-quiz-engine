@@ -17,6 +17,7 @@ export type WidgetType =
   | 'numbersnake'
   | 'letterhero'
   | 'plinko'
+  | 'bubbleshooter'
   | 'none';
 
 export interface QuizOption {
@@ -137,6 +138,11 @@ export interface PlinkoProps {
   dropPosition?: number; // 0..4
 }
 
+export interface BubbleShooterProps {
+  onComplete?: () => void;
+  targetTriplesCount?: number;
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -153,6 +159,7 @@ export interface WidgetConfig {
   numberSnakeProps?: NumberSnakeProps;
   letterHeroProps?: LetterHeroProps;
   plinkoProps?: PlinkoProps;
+  bubbleShooterProps?: BubbleShooterProps;
 }
 
 export interface KeypadConfig {

@@ -16,6 +16,7 @@ import { SvgSpatialScene } from './widgets/SvgSpatialScene';
 import { NumberSnakeGame } from './widgets/NumberSnakeGame';
 import { LetterHeroGame } from './widgets/LetterHeroGame';
 import { PlinkoBonusGame } from './widgets/PlinkoBonusGame';
+import { BubbleShooterGame } from './widgets/BubbleShooterGame';
 
 interface GameBoardProps {
   item: QuizItem;
@@ -183,6 +184,24 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           />
         );
 
+      case 'bubbleshooter':
+        return (
+          <BubbleShooterGame
+            key={item.id}
+            {...item.widget.bubbleShooterProps}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+            onComplete={() => {
+              onSnakeComplete?.();
+              onOptionSelect?.({
+                id: 'completed',
+                label: 'completed',
+                value: 'completed',
+              });
+            }}
+          />
+        );
+
       default:
         return null;
     }
@@ -192,7 +211,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && !isPlinkoActive ? (
+        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && item.widget?.type !== 'bubbleshooter' && !isPlinkoActive ? (
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center justify-center p-2 rounded-xl ${

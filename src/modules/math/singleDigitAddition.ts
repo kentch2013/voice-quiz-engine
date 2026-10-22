@@ -1,9 +1,37 @@
 import type { QuizModule } from '../types';
 import type { GradeBand, QuizItem } from '../../types/quiz';
 
+export function generateSingleDigitAdditionBubbleShooterItem(gradeBand: GradeBand = 'K-1'): QuizItem {
+  return {
+    id: `add-bubble-${Date.now()}`,
+    topicId: 'single-digit-addition',
+    gradeBand,
+    prompt: 'Hex Bubble Shooter Math Game',
+    ttsPrompt: 'Bubble Shooter! Shoot bubbles to form valid addition facts!',
+    ttsPromptConcise: 'Hex Bubble Shooter',
+    ttsPromptZh: '泡泡射击游戏！射击泡泡组成加法等式！',
+    ttsPromptZhConcise: '六角泡泡射击',
+    expectedAnswer: 'completed',
+    widget: {
+      type: 'bubbleshooter',
+      bubbleShooterProps: {
+        targetTriplesCount: 5,
+      },
+    },
+    keypad: {
+      type: 'none',
+    },
+  };
+}
+
 export function generateSingleDigitAdditionItems(gradeBand: GradeBand = 'K-1', count: number = 10): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
+    if (count >= 10 && i === 0) {
+      items.push(generateSingleDigitAdditionBubbleShooterItem(gradeBand));
+      continue;
+    }
+
     const operandA = Math.floor(Math.random() * 10);
     const operandB = Math.floor(Math.random() * 10);
     const expected = operandA + operandB;
