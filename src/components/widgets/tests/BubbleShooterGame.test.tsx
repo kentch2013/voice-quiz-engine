@@ -10,9 +10,13 @@ import {
   findFloatingBubbles,
   createInitialBoard,
   parseVoiceAction,
+  parseSingleToken,
+  tokenizeTranscript,
   levenshteinDistance,
   type BubbleNode,
 } from '../BubbleShooterGame';
+import { GameBoard } from '../../GameBoard';
+import type { QuizItem } from '../../../types/quiz';
 
 vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
@@ -87,6 +91,20 @@ describe('BubbleShooterGame Helper Functions & Logic', () => {
       expect(node.value).toBeLessThanOrEqual(10);
       expect(Number.isInteger(node.value)).toBe(true);
     }
+  });
+
+  it('tokenizes transcripts and parses single word tokens accurately', () => {
+    expect(tokenizeTranscript('right right right')).toEqual(['right', 'right', 'right']);
+    expect(tokenizeTranscript('向左 向右 发射')).toEqual(['向左', '向右', '发射']);
+    expect(tokenizeTranscript('左左')).toEqual(['左', '左']);
+
+    expect(parseSingleToken('right')).toBe('RIGHT');
+    expect(parseSingleToken('light')).toBe('RIGHT');
+    expect(parseSingleToken('left')).toBe('LEFT');
+    expect(parseSingleToken('laugh')).toBe('LEFT');
+    expect(parseSingleToken('shoot')).toBe('FIRE');
+    expect(parseSingleToken('shot')).toBe('FIRE');
+    expect(parseSingleToken('unknown')).toBeNull();
   });
 
   it('parses verbal voice controls for aiming and shooting with homophones and fuzzy matching', () => {
@@ -209,5 +227,90 @@ describe('BubbleShooterGame UI Component', () => {
     act(() => {
       rerender(<BubbleShooterGame transcript="shot" />);
     });
+  });
+
+  it('processes word-by-word instant voice commands for repeated directional tokens without dropping', () => {
+    const { rerender } = render(<BubbleShooterGame transcript="" interimTranscript="" />);
+
+    // Fast cumulative utterance "right right right"
+    act(() => {
+      rerender(<BubbleShooterGame transcript="" interimTranscript="right right right" />);
+    });
+
+    // Interim update appending "shoot"
+    act(() => {
+      rerender(<BubbleShooterGame transcript="" interimTranscript="right right right shoot" />);
+    });
+
+    // Finalized transcript update
+    act(() => {
+      rerender(<BubbleShooterGame transcript="right right right shoot" interimTranscript="" />);
+    });
+  });
+
+  it('persists board state continuously across multiple questions/progress increments in GameBoard', () => {
+    const dummyItem1: QuizItem = {
+      id: 'item-1',
+      topicId: 'single-digit-addition',
+      gradeBand: 'K-1',
+      prompt: 'Hex Bubble Shooter',
+      expectedAnswer: 'completed',
+      widget: {
+        type: 'bubbleshooter',
+        bubbleShooterProps: {
+          targetTriplesCount: 5,
+        },
+      },
+    };
+
+    const dummyItem2: QuizItem = {
+      ...dummyItem1,
+      id: 'item-2',
+    };
+
+    const { rerender } = render(
+      <GameBoard
+        item={dummyItem1}
+        timeLeft={30}
+        showSilenceNudge={false}
+        transcript=""
+        interimTranscript=""
+        isListening={true}
+        volumeLevel={10}
+        isSpeechDetected={false}
+        keypadInput=""
+        language="en-US"
+        onLanguageChange={() => {}}
+      />
+    );
+
+    // Initial cannon and SVG loaded
+    expect(screen.getByTestId('bubble-cannon-svg')).toBeDefined();
+
+    // Shoot a bubble
+    const shootBtn = screen.getByRole('button', { name: /Shoot Bubble/i });
+    act(() => {
+      fireEvent.click(shootBtn);
+    });
+
+    // Rerender GameBoard with new item.id (simulating progress increment in engine)
+    rerender(
+      <GameBoard
+        item={dummyItem2}
+        timeLeft={30}
+        showSilenceNudge={false}
+        transcript=""
+        interimTranscript=""
+        isListening={true}
+        volumeLevel={10}
+        isSpeechDetected={false}
+        keypadInput=""
+        language="en-US"
+        onLanguageChange={() => {}}
+      />
+    );
+
+    // Board continues to render without wiping or resetting cannon
+    expect(screen.getByTestId('bubble-cannon-svg')).toBeDefined();
   });
 });

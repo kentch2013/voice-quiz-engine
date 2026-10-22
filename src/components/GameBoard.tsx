@@ -187,7 +187,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       case 'bubbleshooter':
         return (
           <BubbleShooterGame
-            key={item.id}
+            key={item.widget?.type || 'bubbleshooter'}
             {...item.widget.bubbleShooterProps}
             transcript={transcript}
             interimTranscript={interimTranscript}
