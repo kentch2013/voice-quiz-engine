@@ -141,6 +141,7 @@ export interface PlinkoProps {
 export interface BubbleShooterProps {
   onComplete?: () => void;
   targetTriplesCount?: number;
+  onTripleMatched?: () => void;
 }
 
 export interface WidgetConfig {

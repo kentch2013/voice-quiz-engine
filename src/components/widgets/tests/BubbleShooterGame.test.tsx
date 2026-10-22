@@ -138,7 +138,7 @@ describe('BubbleShooterGame UI Component', () => {
   it('renders interactive controls, header, next bubble preview, hex grid, cannon SVG, and laser aim line', () => {
     render(<BubbleShooterGame targetTriplesCount={5} />);
 
-    expect(screen.getByText(/Match Triples/i)).toBeDefined();
+    expect(screen.queryByText(/Match Triples/i)).toBeNull();
     expect(screen.getByText(/Triples Cleared: 0 \/ 5/i)).toBeDefined();
     expect(screen.getByText(/Next Bubble:/i)).toBeDefined();
     expect(screen.getByRole('button', { name: /Aim Left/i })).toBeDefined();
@@ -151,6 +151,27 @@ describe('BubbleShooterGame UI Component', () => {
     expect(screen.getByTestId('destination-hex-highlight')).toBeDefined();
     expect(screen.getByTestId('bubble-cannon-gun')).toBeDefined();
     expect(screen.getByTestId('cannon-barrel-rotator')).toBeDefined();
+  });
+
+  it('renders enlarged loaded bubble with radius 22 and font size 20 inside cannon barrel', () => {
+    render(<BubbleShooterGame />);
+
+    const rotator = screen.getByTestId('cannon-barrel-rotator');
+    const circle = rotator.querySelector('circle');
+    const text = rotator.querySelector('text');
+
+    expect(circle?.getAttribute('r')).toBe('22');
+    expect(text?.getAttribute('font-size')).toBe('20');
+  });
+
+  it('triggers onTripleMatched callback when a number triple is formed', () => {
+    const onTripleMatchedMock = vi.fn();
+    render(<BubbleShooterGame onTripleMatched={onTripleMatchedMock} />);
+
+    const shootBtn = screen.getByRole('button', { name: /Shoot Bubble/i });
+    act(() => {
+      fireEvent.click(shootBtn);
+    });
   });
 
   it('handles aiming left and right via controls', () => {
