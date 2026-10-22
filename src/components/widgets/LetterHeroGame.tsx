@@ -9,7 +9,7 @@ export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export const FALL_DURATION_MS = 5000;
 export const SPAWN_INTERVAL_MS = 4000;
-export const STRIKE_ZONE_START = 80; // 80% to 100% is strike zone
+export const STRIKE_ZONE_START = 60; // 60% to 100% is strike zone (lenient for children)
 
 export interface FallingLetterItem {
   id: string;
@@ -81,6 +81,8 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
     id: number;
   } | null>(null);
 
+  const [now, setNow] = useState<number>(() => Date.now());
+
   const activeLettersRef = useRef<FallingLetterItem[]>(activeLetters);
   activeLettersRef.current = activeLetters;
 
@@ -89,6 +91,22 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
   onCompleteRef.current = onComplete;
   const onScoreUpdateRef = useRef(onScoreUpdate);
   onScoreUpdateRef.current = onScoreUpdate;
+
+  // Animation frame loop for smooth rendering of falling letters
+  useEffect(() => {
+    if (isCompleted) return;
+
+    let animId: number;
+    const tick = () => {
+      setNow(Date.now());
+      animId = requestAnimationFrame(tick);
+    };
+    animId = requestAnimationFrame(tick);
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isCompleted]);
 
   // 1. Spawner interval (spawns 1 letter every 4 seconds up to 10 letters)
   useEffect(() => {
@@ -128,70 +146,65 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
     return () => clearInterval(timer);
   }, [spawnIndex, targetLetters, isCompleted, activeLetters.length]);
 
-  // 2. Main animation frame / ticker to check for miss expiration
+  // 2. Check for miss expiration and round completion on frame updates
   useEffect(() => {
     if (isCompleted) return;
 
-    const interval = setInterval(() => {
-      const now = Date.now();
-      let updated = false;
+    let updated = false;
 
-      const nextList = activeLettersRef.current.map((item) => {
-        if (item.hit) return item;
+    const nextList = activeLettersRef.current.map((item) => {
+      if (item.hit) return item;
 
-        const progress = ((now - item.spawnTime) / FALL_DURATION_MS) * 100;
-        if (progress >= 100) {
-          // Reached bottom without being spoken -> Miss!
-          updated = true;
-          playWrongSound();
-          setMissCount((m) => m + 1);
-          setRecentRating({
-            text: 'Miss',
-            letter: item.letter,
-            points: 0,
-            id: Date.now(),
-          });
-          if (onScoreUpdateRef.current) {
-            onScoreUpdateRef.current(0, 'Miss');
-          }
-          return {
-            ...item,
-            hit: true,
-            rating: 'Miss' as const,
-          };
+      const progress = ((now - item.spawnTime) / FALL_DURATION_MS) * 100;
+      if (progress >= 100) {
+        // Reached bottom without being spoken -> Miss!
+        updated = true;
+        playWrongSound();
+        setMissCount((m) => m + 1);
+        setRecentRating({
+          text: 'Miss',
+          letter: item.letter,
+          points: 0,
+          id: Date.now(),
+        });
+        if (onScoreUpdateRef.current) {
+          onScoreUpdateRef.current(0, 'Miss');
         }
-        return item;
-      });
-
-      if (updated) {
-        setActiveLetters(nextList);
-        activeLettersRef.current = nextList;
+        return {
+          ...item,
+          hit: true,
+          rating: 'Miss' as const,
+        };
       }
+      return item;
+    });
 
-      // Check if round is complete (10 letters spawned & all processed)
-      if (
-        activeLettersRef.current.length >= targetLetters.length &&
-        nextList.every((item) => item.hit)
-      ) {
-        setIsCompleted(true);
-        try {
-          confetti({
-            particleCount: 120,
-            spread: 80,
-            origin: { y: 0.6 },
-          });
-        } catch {
-          // ignore in test envs
-        }
-        if (onCompleteRef.current) {
-          const cb = onCompleteRef.current;
-          setTimeout(() => cb(), 1500);
-        }
+    if (updated) {
+      setActiveLetters(nextList);
+      activeLettersRef.current = nextList;
+    }
+
+    // Check if round is complete (10 letters spawned & all processed)
+    if (
+      activeLettersRef.current.length >= targetLetters.length &&
+      nextList.every((item) => item.hit)
+    ) {
+      setIsCompleted(true);
+      try {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+        });
+      } catch {
+        // ignore in test envs
       }
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [isCompleted, spawnIndex, targetLetters.length]);
+      if (onCompleteRef.current) {
+        const cb = onCompleteRef.current;
+        setTimeout(() => cb(), 1500);
+      }
+    }
+  }, [now, isCompleted, targetLetters.length]);
 
   // Function to register a hit on a falling letter
   const registerHit = (fallingItem: FallingLetterItem, progress: number) => {
@@ -330,8 +343,8 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
         <div className="absolute inset-y-0 left-3/4 w-[2px] bg-indigo-500/20 pointer-events-none" />
 
         {/* Bottom Collection Target Strike Zone */}
-        <div className="absolute bottom-0 inset-x-0 h-[20%] bg-gradient-to-t from-emerald-500/30 to-emerald-500/5 border-t-4 border-emerald-400 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-11/12 h-12 border-2 border-dashed border-emerald-300 rounded-2xl flex items-center justify-center bg-emerald-500/20 backdrop-blur-xs shadow-lg shadow-emerald-500/20">
+        <div className="absolute bottom-0 inset-x-0 h-[40%] bg-gradient-to-t from-emerald-500/30 to-emerald-500/5 border-t-4 border-emerald-400 flex items-center justify-center pointer-events-none z-10">
+          <div className="w-11/12 h-14 border-2 border-dashed border-emerald-300 rounded-2xl flex items-center justify-center bg-emerald-500/20 backdrop-blur-xs shadow-lg shadow-emerald-500/20">
             <span className="text-emerald-300 font-extrabold text-xs uppercase tracking-widest animate-pulse">
               🎯 STRIKE ZONE (Say Letter Now!) 🎯
             </span>
@@ -357,15 +370,13 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
         {/* Falling Letters Area */}
         <div className="relative w-full h-full">
           {activeLetters.map((item) => {
-            const now = Date.now();
-            const progress = Math.min(100, ((now - item.spawnTime) / FALL_DURATION_MS) * 100);
-
-            if (item.hit && item.rating === 'Miss') {
-              return null; // Hide missed letters after registering
+            if (item.hit) {
+              return null; // Hide hit or missed letters immediately
             }
 
-            if (item.hit) {
-              return null; // Hide hit letters
+            const progress = ((now - item.spawnTime) / FALL_DURATION_MS) * 100;
+            if (progress >= 100) {
+              return null; // Hide expired letters immediately
             }
 
             const isInStrikeZone = progress >= STRIKE_ZONE_START && progress < 100;
@@ -375,12 +386,14 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
                 key={item.id}
                 style={{
                   top: `${progress}%`,
-                  transform: 'translate(-50%, -50%)',
+                  transform: isInStrikeZone
+                    ? 'translate(-50%, -50%) scale(1.1)'
+                    : 'translate(-50%, -50%)',
                 }}
                 onClick={() => registerHit(item, progress)}
-                className={`absolute left-1/2 cursor-pointer transition-transform duration-75 flex items-center justify-center w-14 h-14 rounded-2xl font-black text-2xl sm:text-3xl border-4 shadow-xl z-20 ${
+                className={`absolute left-1/2 cursor-pointer flex items-center justify-center w-14 h-14 rounded-2xl font-black text-2xl sm:text-3xl border-4 shadow-xl z-20 select-none ${
                   isInStrikeZone
-                    ? 'bg-amber-400 text-slate-950 border-white shadow-amber-400/80 scale-110 animate-bounce'
+                    ? 'bg-amber-400 text-slate-950 border-white shadow-amber-400/80 ring-4 ring-amber-300'
                     : 'bg-indigo-600 text-white border-indigo-300 shadow-indigo-600/60'
                 }`}
               >
