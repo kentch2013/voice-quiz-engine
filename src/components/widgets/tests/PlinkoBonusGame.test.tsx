@@ -55,7 +55,11 @@ describe('PlinkoBonusGame Component', () => {
     expect(screen.getByRole('button', { name: /Drop Plinko Ball/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Move Slot Right/i })).toBeDefined();
 
-    // Verify all well numbers 1 through 9 are present
+    // Verify aria-labels for top slots exist without rendering slot numbers 0..4 or 1..5 in visible text
+    expect(screen.getByRole('button', { name: 'Drop Slot 1' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Drop Slot 5' })).toBeDefined();
+
+    // Verify all well numbers 1 through 9 are present at bottom
     for (let num = 1; num <= 9; num++) {
       expect(screen.getAllByText(num.toString()).length).toBeGreaterThan(0);
     }

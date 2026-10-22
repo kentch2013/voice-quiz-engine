@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { LetterHeroGame, isLetterSpoken, FALL_DURATION_MS, STRIKE_ZONE_START } from '../LetterHeroGame';
+import { LetterHeroGame, isLetterSpoken, FALL_DURATION_MS, STRIKE_ZONE_START, LANES } from '../LetterHeroGame';
 import { playCorrectChime, playWrongSound } from '../../../utils/audioSynthesizer';
 
 // Mock audioSynthesizer to avoid AudioContext issues in JSDOM
@@ -85,8 +85,9 @@ describe('LetterHeroGame Component', () => {
     expect(screen.getByText(/Good: 1/i)).toBeDefined();
   });
 
-  it('exports STRIKE_ZONE_START = 60 for expanded strike zone leniency', () => {
+  it('exports STRIKE_ZONE_START = 60 and LANES multi-lane coordinates', () => {
     expect(STRIKE_ZONE_START).toBe(60);
+    expect(LANES).toEqual([20, 40, 60, 80]);
   });
 
   it('awards "Perfect!" when hit within expanded strike zone (progress >= 60%)', () => {
