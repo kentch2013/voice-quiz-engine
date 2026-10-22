@@ -9,6 +9,7 @@ export interface BubbleShooterGameProps extends BubbleShooterProps {
   interimTranscript?: string;
   onComplete?: () => void;
   targetTriplesCount?: number;
+  onTripleMatched?: () => void;
 }
 
 export interface HexCoord {
@@ -347,7 +348,8 @@ export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null
     'bang',
   ]);
 
-  for (const token of tokens) {
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const token = tokens[i];
     if (leftKeywords.has(token)) return 'LEFT';
     if (rightKeywords.has(token)) return 'RIGHT';
     if (fireKeywords.has(token)) return 'FIRE';
@@ -369,6 +371,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   interimTranscript = '',
   onComplete,
   targetTriplesCount = TARGET_TRIPLES,
+  onTripleMatched,
 }) => {
   const [board, setBoard] = useState<Map<string, BubbleNode>>(() => createInitialBoard());
   const [clearedTriples, setClearedTriples] = useState<number>(0);
@@ -377,31 +380,45 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  const processedVoiceRef = useRef<string>('');
+  const lastProcessedVoiceRef = useRef<string>('');
   const boardRef = useRef(board);
   boardRef.current = board;
+
+  const aimIndexRef = useRef(aimIndex);
+  aimIndexRef.current = aimIndex;
 
   const candidatePositions = useMemo(() => getCandidateOpenPositions(board), [board]);
 
   // Keep aim index bounded when candidate positions change
   useEffect(() => {
     if (candidatePositions.length > 0 && aimIndex >= candidatePositions.length) {
-      setAimIndex(candidatePositions.length - 1);
+      const bounded = candidatePositions.length - 1;
+      setAimIndex(bounded);
+      aimIndexRef.current = bounded;
     }
   }, [candidatePositions, aimIndex]);
 
   const handleAimLeft = useCallback(() => {
-    setAimIndex((prev) => Math.max(0, prev - 1));
+    setAimIndex((prev) => {
+      const next = Math.max(0, prev - 1);
+      aimIndexRef.current = next;
+      return next;
+    });
   }, []);
 
   const handleAimRight = useCallback(() => {
-    setAimIndex((prev) => Math.min(candidatePositions.length - 1, prev + 1));
+    setAimIndex((prev) => {
+      const next = Math.min(candidatePositions.length - 1, prev + 1);
+      aimIndexRef.current = next;
+      return next;
+    });
   }, [candidatePositions.length]);
 
   const handleShoot = useCallback(() => {
     if (isCompleted || candidatePositions.length === 0) return;
 
-    const targetPos = candidatePositions[aimIndex] || candidatePositions[0];
+    const currentAimIndex = aimIndexRef.current;
+    const targetPos = candidatePositions[currentAimIndex] || candidatePositions[0];
     if (!targetPos) return;
 
     const currentVal = nextBubbleValue;
@@ -436,6 +453,10 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
       floatingCoords.forEach((c) => newBoard.delete(coordKey(c.r, c.c)));
 
       const triplesMatchedCount = matchedTriangles.length;
+      for (let i = 0; i < triplesMatchedCount; i++) {
+        onTripleMatched?.();
+      }
+
       setClearedTriples((prev) => {
         const nextTotal = prev + triplesMatchedCount;
         if (nextTotal >= targetTriplesCount || newBoard.size === 0) {
@@ -464,11 +485,21 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   // Voice transcript control handler
   useEffect(() => {
     const combined = `${transcript} ${interimTranscript}`.trim();
-    if (!combined || combined === processedVoiceRef.current) return;
+    if (!combined) {
+      lastProcessedVoiceRef.current = '';
+      return;
+    }
 
-    const action = parseVoiceAction(combined);
+    let newText = combined;
+    if (lastProcessedVoiceRef.current && combined.startsWith(lastProcessedVoiceRef.current)) {
+      newText = combined.slice(lastProcessedVoiceRef.current.length).trim();
+    }
+
+    if (!newText) return;
+
+    const action = parseVoiceAction(newText) || parseVoiceAction(combined);
     if (action) {
-      processedVoiceRef.current = combined;
+      lastProcessedVoiceRef.current = combined;
       if (action === 'LEFT') handleAimLeft();
       else if (action === 'RIGHT') handleAimRight();
       else if (action === 'FIRE') handleShoot();
@@ -513,7 +544,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
 
   let gunRotationDeg = 0;
   let nozzleX = cannonX;
-  let nozzleY = cannonY - 42;
+  let nozzleY = cannonY - 58;
 
   if (targetCoords) {
     const dx = targetCoords.x - cannonX;
@@ -522,7 +553,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
     const angleDeg = angleRad * (180 / Math.PI);
     gunRotationDeg = angleDeg + 90;
 
-    const nozzleLen = 42;
+    const nozzleLen = 58;
     nozzleX = cannonX + nozzleLen * Math.cos(angleRad);
     nozzleY = cannonY + nozzleLen * Math.sin(angleRad);
   }
@@ -531,10 +562,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
     <div className="w-full max-w-xl mx-auto flex flex-col items-center select-none">
       {/* Objective & Progress Banner */}
       <div className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-4 text-white shadow-lg mb-4 text-center border-2 border-indigo-200">
-        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-          <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
-            🎯 Match Triples ($n_1 + n_2 = n_3$)
-          </div>
+        <div className="flex items-center justify-center gap-2 flex-wrap sm:flex-nowrap">
           <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl font-black text-xs sm:text-sm">
             Triples Cleared: {clearedTriples} / {targetTriplesCount}
           </div>
@@ -634,22 +662,22 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
             <g transform={`rotate(${gunRotationDeg})`} data-testid="cannon-barrel-rotator">
               {/* Barrel Housing */}
               <rect
-                x="-12"
-                y="-42"
-                width="24"
-                height="42"
-                rx="6"
+                x="-25"
+                y="-56"
+                width="50"
+                height="56"
+                rx="8"
                 fill="#334155"
                 stroke="#818cf8"
                 strokeWidth="2"
               />
               {/* Nozzle Rim */}
               <rect
-                x="-14"
-                y="-46"
-                width="28"
-                height="8"
-                rx="3"
+                x="-27"
+                y="-62"
+                width="54"
+                height="10"
+                rx="4"
                 fill="#475569"
                 stroke="#c084fc"
                 strokeWidth="2"
@@ -657,18 +685,18 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
               {/* Active Projectile Bubble Loaded inside Nozzle */}
               <circle
                 cx="0"
-                cy="-24"
-                r="11"
+                cy="-30"
+                r="22"
                 fill="url(#bubble-gradient)"
                 stroke="#ffffff"
                 strokeWidth="2"
               />
               <text
                 x="0"
-                y="-20"
+                y="-23"
                 textAnchor="middle"
                 fill="#ffffff"
-                fontSize="11"
+                fontSize="20"
                 fontWeight="900"
               >
                 {nextBubbleValue}

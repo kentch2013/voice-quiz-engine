@@ -191,6 +191,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             {...item.widget.bubbleShooterProps}
             transcript={transcript}
             interimTranscript={interimTranscript}
+            onTripleMatched={() => {
+              // Advance twice on question progress bar per matched triple
+              onEatTarget?.(0, 0);
+              onEatTarget?.(0, 0);
+            }}
             onComplete={() => {
               onSnakeComplete?.();
               onOptionSelect?.({
