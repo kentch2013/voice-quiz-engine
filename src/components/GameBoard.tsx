@@ -63,7 +63,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const currentDisplayedTranscript = interimTranscript || transcript;
 
   const renderWidget = () => {
-    if (isPlinkoActive || item.topicId === 'number-bonds-10' || item.widget?.type === 'plinko') {
+    if (isPlinkoActive || item.widget?.type === 'plinko') {
       return (
         <PlinkoBonusGame
           {...(item.widget?.plinkoProps || {})}
@@ -190,7 +190,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && item.topicId !== 'number-bonds-10' && !isPlinkoActive ? (
+        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && !isPlinkoActive ? (
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center justify-center p-2 rounded-xl ${

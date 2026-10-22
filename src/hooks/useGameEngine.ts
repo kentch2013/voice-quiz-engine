@@ -178,6 +178,18 @@ export function useGameEngine() {
       const updatedResults = [...results, newResult];
       setResults(updatedResults);
 
+      if (currentItem.topicId === 'number-bonds-10' && isCorrect && inputMethod !== 'timeout') {
+        setIsPlinkoActive(true);
+        resetTranscriptRef.current();
+        setKeypadInput('');
+        setAttemptsCount(0);
+        setShowSilenceNudge(false);
+        setShowExpiredAnswer(false);
+        silenceTimeRef.current = 0;
+        isTransitioningRef.current = false;
+        return;
+      }
+
       const advanceToNext = () => {
         resetTranscriptRef.current();
         setKeypadInput('');
@@ -220,11 +232,12 @@ export function useGameEngine() {
       const operandN = Math.max(1, Math.min(9, wellNumber));
       const missingAddend = 10 - operandN;
 
-      setQuizItems((prevItems) => {
-        const updated = [...prevItems];
-        if (currentIndex < updated.length) {
-          updated[currentIndex] = {
-            ...updated[currentIndex],
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < quizItems.length) {
+        setQuizItems((prevItems) => {
+          const updated = [...prevItems];
+          updated[nextIndex] = {
+            ...updated[nextIndex],
             operandA: operandN,
             operandB: missingAddend,
             expectedAnswer: missingAddend,
@@ -235,13 +248,21 @@ export function useGameEngine() {
             ttsPromptZh: `${operandN} 加几等于 10?`,
             ttsPromptZhConcise: `${operandN} 加几等于 10`,
             widget: {
-              type: 'plinko',
-              plinkoProps: {},
+              type: 'tenframe',
+              tenFrameProps: {
+                count: operandN,
+                total: 10,
+              },
             },
           };
-        }
-        return updated;
-      });
+          return updated;
+        });
+        setCurrentIndex(nextIndex);
+        setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+        questionStartTimeRef.current = Date.now();
+      } else {
+        finishGameRef.current(resultsRef.current);
+      }
 
       resetTranscriptRef.current();
       setKeypadInput('');
@@ -251,7 +272,7 @@ export function useGameEngine() {
       silenceTimeRef.current = 0;
       isTransitioningRef.current = false;
     },
-    [currentIndex]
+    [currentIndex, quizItems.length]
   );
 
   const submitAnswerRef = useRef(submitAnswer);

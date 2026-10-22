@@ -355,10 +355,12 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
         <div className="w-full h-12 relative flex items-center mb-1">
           {DROP_SLOT_X.map((xPos, idx) => {
             const isSelected = selectedSlotIndex === idx && !isDropping;
+            const isLeftOfSelected = idx < selectedSlotIndex;
             return (
               <button
                 key={`slot-${idx}`}
                 type="button"
+                aria-label={`Drop Slot ${idx + 1}`}
                 onClick={() => {
                   if (!isDropping) {
                     playClickSound();
@@ -375,7 +377,13 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
                     : 'bg-indigo-900/80 border-indigo-400 text-indigo-200 hover:bg-indigo-700 hover:scale-110'
                 }`}
               >
-                {idx + 1}
+                {isSelected ? (
+                  <ArrowDownCircle size={18} className="text-slate-900 animate-pulse" />
+                ) : isLeftOfSelected ? (
+                  <ChevronLeft size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
               </button>
             );
           })}

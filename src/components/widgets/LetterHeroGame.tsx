@@ -10,11 +10,13 @@ export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 export const FALL_DURATION_MS = 5000;
 export const SPAWN_INTERVAL_MS = 4000;
 export const STRIKE_ZONE_START = 60; // 60% to 100% is strike zone (lenient for children)
+export const LANES = [20, 40, 60, 80];
 
 export interface FallingLetterItem {
   id: string;
   letter: string;
   spawnTime: number;
+  lane: number;
   hit?: boolean;
   rating?: 'Perfect!' | 'Good!' | 'Miss';
 }
@@ -69,6 +71,7 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
 
   const [activeLetters, setActiveLetters] = useState<FallingLetterItem[]>([]);
   const [spawnIndex, setSpawnIndex] = useState<number>(0);
+  const [processedCount, setProcessedCount] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const [perfectCount, setPerfectCount] = useState<number>(0);
   const [goodCount, setGoodCount] = useState<number>(0);
@@ -108,17 +111,19 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
     };
   }, [isCompleted]);
 
-  // 1. Spawner interval (spawns 1 letter every 4 seconds up to 10 letters)
+  // 1. Spawner interval (spawns 1 letter every 4 seconds up to targetLetters.length)
   useEffect(() => {
     if (isCompleted) return;
 
     // Spawn initial letter at t=0 if not started
-    if (spawnIndex === 0 && activeLetters.length === 0) {
+    if (spawnIndex === 0 && activeLetters.length === 0 && processedCount === 0) {
       const firstLetter = targetLetters[0];
+      const lane = LANES[Math.floor(Math.random() * LANES.length)];
       const newItem: FallingLetterItem = {
         id: `falling-0-${Date.now()}`,
         letter: firstLetter,
         spawnTime: Date.now(),
+        lane,
       };
       setActiveLetters([newItem]);
       setSpawnIndex(1);
@@ -132,10 +137,12 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
         }
 
         const nextLetter = targetLetters[prevIndex];
+        const lane = LANES[Math.floor(Math.random() * LANES.length)];
         const newItem: FallingLetterItem = {
           id: `falling-${prevIndex}-${Date.now()}`,
           letter: nextLetter,
           spawnTime: Date.now(),
+          lane,
         };
 
         setActiveLetters((prev) => [...prev, newItem]);
@@ -144,51 +151,52 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
     }, SPAWN_INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, [spawnIndex, targetLetters, isCompleted, activeLetters.length]);
+  }, [spawnIndex, targetLetters, isCompleted, activeLetters.length, processedCount]);
 
-  // 2. Check for miss expiration and round completion on frame updates
+  // 2. Check for miss expiration on frame updates
   useEffect(() => {
     if (isCompleted) return;
 
-    let updated = false;
+    const currentActive = activeLettersRef.current;
+    if (currentActive.length === 0) return;
 
-    const nextList = activeLettersRef.current.map((item) => {
-      if (item.hit) return item;
+    const expiredItems: FallingLetterItem[] = [];
+    const remainingItems: FallingLetterItem[] = [];
 
+    for (const item of currentActive) {
       const progress = ((now - item.spawnTime) / FALL_DURATION_MS) * 100;
       if (progress >= 100) {
-        // Reached bottom without being spoken -> Miss!
-        updated = true;
+        expiredItems.push(item);
+      } else {
+        remainingItems.push(item);
+      }
+    }
+
+    if (expiredItems.length > 0) {
+      for (const expiredItem of expiredItems) {
         playWrongSound();
         setMissCount((m) => m + 1);
         setRecentRating({
           text: 'Miss',
-          letter: item.letter,
+          letter: expiredItem.letter,
           points: 0,
           id: Date.now(),
         });
         if (onScoreUpdateRef.current) {
           onScoreUpdateRef.current(0, 'Miss');
         }
-        return {
-          ...item,
-          hit: true,
-          rating: 'Miss' as const,
-        };
       }
-      return item;
-    });
-
-    if (updated) {
-      setActiveLetters(nextList);
-      activeLettersRef.current = nextList;
+      setActiveLetters(remainingItems);
+      activeLettersRef.current = remainingItems;
+      setProcessedCount((p) => p + expiredItems.length);
     }
+  }, [now, isCompleted]);
 
-    // Check if round is complete (10 letters spawned & all processed)
-    if (
-      activeLettersRef.current.length >= targetLetters.length &&
-      nextList.every((item) => item.hit)
-    ) {
+  // Check if round is complete (all target letters processed)
+  useEffect(() => {
+    if (isCompleted) return;
+
+    if (processedCount >= targetLetters.length) {
       setIsCompleted(true);
       try {
         confetti({
@@ -204,7 +212,7 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
         setTimeout(() => cb(), 1500);
       }
     }
-  }, [now, isCompleted, targetLetters.length]);
+  }, [processedCount, targetLetters.length, isCompleted]);
 
   // Function to register a hit on a falling letter
   const registerHit = (fallingItem: FallingLetterItem, progress: number) => {
@@ -229,13 +237,8 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
       onScoreUpdateRef.current(points, ratingText);
     }
 
-    setActiveLetters((prev) =>
-      prev.map((item) =>
-        item.id === fallingItem.id
-          ? { ...item, hit: true, rating: ratingText }
-          : item
-      )
-    );
+    setActiveLetters((prev) => prev.filter((item) => item.id !== fallingItem.id));
+    setProcessedCount((p) => p + 1);
   };
 
   // 3. Speech transcript matching listener
@@ -370,13 +373,9 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
         {/* Falling Letters Area */}
         <div className="relative w-full h-full">
           {activeLetters.map((item) => {
-            if (item.hit) {
-              return null; // Hide hit or missed letters immediately
-            }
-
             const progress = ((now - item.spawnTime) / FALL_DURATION_MS) * 100;
             if (progress >= 100) {
-              return null; // Hide expired letters immediately
+              return null;
             }
 
             const isInStrikeZone = progress >= STRIKE_ZONE_START && progress < 100;
@@ -386,15 +385,16 @@ export const LetterHeroGame: React.FC<LetterHeroGameProps> = ({
                 key={item.id}
                 style={{
                   top: `${progress}%`,
+                  left: `${item.lane}%`,
                   transform: isInStrikeZone
                     ? 'translate(-50%, -50%) scale(1.1)'
                     : 'translate(-50%, -50%)',
                 }}
                 onClick={() => registerHit(item, progress)}
-                className={`absolute left-1/2 cursor-pointer flex items-center justify-center w-14 h-14 rounded-2xl font-black text-2xl sm:text-3xl border-4 shadow-xl z-20 select-none ${
+                className={`absolute cursor-pointer flex items-center justify-center w-14 h-14 rounded-2xl font-black text-2xl sm:text-3xl border-4 shadow-lg z-20 select-none ${
                   isInStrikeZone
                     ? 'bg-amber-400 text-slate-950 border-white shadow-amber-400/80 ring-4 ring-amber-300'
-                    : 'bg-indigo-600 text-white border-indigo-300 shadow-indigo-600/60'
+                    : 'bg-indigo-600 text-white border-indigo-300 shadow-indigo-500/40'
                 }`}
               >
                 {item.letter}
