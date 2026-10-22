@@ -122,4 +122,19 @@ describe('PlinkoBonusGame Component', () => {
 
     expect(screen.getByRole('button', { name: /Drop Plinko Ball/i })).toBeDefined();
   });
+
+  it('ensures outer pegs have clearance from wall boundaries', () => {
+    const { container } = render(<PlinkoBonusGame />);
+    const pegElements = container.querySelectorAll('circle[r="6"]');
+    expect(pegElements.length).toBeGreaterThan(0);
+
+    // BALL_RADIUS is 15, BALL_RADIUS * 2 clearance is 30.
+    // leftBound is BALL_RADIUS + 4 = 19, rightBound is 400 - 19 = 381.
+    pegElements.forEach((peg) => {
+      const cx = parseFloat(peg.getAttribute('cx') || '0');
+      // Verify peg x is sufficiently far from left and right boundaries
+      expect(cx).toBeGreaterThanOrEqual(50);
+      expect(cx).toBeLessThanOrEqual(350);
+    });
+  });
 });
