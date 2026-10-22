@@ -63,9 +63,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const currentDisplayedTranscript = interimTranscript || transcript;
 
   const renderWidget = () => {
-    if (isPlinkoActive) {
+    if (isPlinkoActive || item.topicId === 'number-bonds-10' || item.widget?.type === 'plinko') {
       return (
         <PlinkoBonusGame
+          {...(item.widget?.plinkoProps || {})}
           transcript={transcript}
           interimTranscript={interimTranscript}
           onComplete={onPlinkoComplete}
@@ -189,7 +190,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && !isPlinkoActive ? (
+        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && item.topicId !== 'number-bonds-10' && !isPlinkoActive ? (
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center justify-center p-2 rounded-xl ${
@@ -213,7 +214,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl font-extrabold text-xs uppercase tracking-wider">
-            🐍 Continuous Play Mode
+            🎯 Interactive Board Mode
           </div>
         )}
 

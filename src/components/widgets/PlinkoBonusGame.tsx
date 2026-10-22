@@ -15,9 +15,18 @@ export type PlinkoVoiceCommand = 'LEFT' | 'RIGHT' | 'DROP';
 const BOARD_WIDTH = 400;
 const BOARD_HEIGHT = 500;
 const DROP_SLOTS_COUNT = 5;
-const BALL_RADIUS = 10;
+const BALL_RADIUS = 15;
 const PEG_RADIUS = 6;
 const WELL_COUNT = 9;
+
+function shuffleWellNumbers(): number[] {
+  const wells = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  for (let i = wells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [wells[i], wells[j]] = [wells[j], wells[i]];
+  }
+  return wells;
+}
 
 // Calculate drop slot X coordinates
 const SLOT_PADDING = 50;
@@ -107,6 +116,7 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
   interimTranscript = '',
   onComplete,
 }) => {
+  const [wellNumbers, setWellNumbers] = useState<number[]>(() => shuffleWellNumbers());
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(2); // Center slot (0..4)
   const [isDropping, setIsDropping] = useState<boolean>(false);
   const [ballPos, setBallPos] = useState<{ x: number; y: number } | null>(null);
@@ -118,6 +128,9 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
   const animFrameRef = useRef<number | null>(null);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+
+  const wellNumbersRef = useRef(wellNumbers);
+  wellNumbersRef.current = wellNumbers;
 
   // Physics state refs to avoid stale closure in requestAnimationFrame loop
   const ballPhysicsRef = useRef<{
@@ -142,14 +155,23 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
   const dropBall = useCallback(() => {
     if (isDropping) return;
     playClickSound();
+
+    if (isFinished) {
+      setIsFinished(false);
+      setLandedWell(null);
+      const newWells = shuffleWellNumbers();
+      setWellNumbers(newWells);
+      wellNumbersRef.current = newWells;
+    }
+
     setIsDropping(true);
 
     const startX = DROP_SLOT_X[selectedSlotIndex];
     const startY = 30;
 
-    // Give ball slight initial random variance to make trajectory interesting
-    const initialVx = (Math.random() - 0.5) * 1.2;
-    const initialVy = 1.0;
+    // Slowed initial velocities (50% scale reduction)
+    const initialVx = (Math.random() - 0.5) * 0.6;
+    const initialVy = 0.5;
 
     ballPhysicsRef.current = {
       x: startX,
@@ -159,7 +181,7 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
     };
 
     setBallPos({ x: startX, y: startY });
-  }, [isDropping, selectedSlotIndex]);
+  }, [isDropping, isFinished, selectedSlotIndex]);
 
   // Handle voice commands
   useEffect(() => {
@@ -194,7 +216,8 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
   useEffect(() => {
     if (!isDropping || isFinished) return;
 
-    const gravity = 0.32;
+    // Slowed gravity (50% reduction: 0.16)
+    const gravity = 0.16;
     const restitution = 0.65;
     const friction = 0.985;
     const wellY = 440;
@@ -246,8 +269,8 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
           const dot = p.vx * nx + p.vy * ny;
 
           if (dot < 0) {
-            // Reflect velocity along normal with restitution & small randomized bounce deflection
-            const bounceRand = (Math.random() - 0.5) * 0.8;
+            // Reflect velocity along normal with restitution & small randomized bounce deflection (50% scale)
+            const bounceRand = (Math.random() - 0.5) * 0.4;
             p.vx = (p.vx - (1 + restitution) * dot * nx) + bounceRand;
             p.vy = (p.vy - (1 + restitution) * dot * ny) + Math.abs(bounceRand) * 0.2;
           }
@@ -259,11 +282,12 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
 
       // Check bottom well landing
       if (p.y >= wellY) {
-        // Calculate well number (1 to 9)
+        // Calculate well index and look up randomized well number
         const wellWidth = BOARD_WIDTH / WELL_COUNT;
         let wellIndex = Math.floor(p.x / wellWidth);
         wellIndex = Math.max(0, Math.min(WELL_COUNT - 1, wellIndex));
-        const wellNumber = wellIndex + 1;
+        const currentWellNumbers = wellNumbersRef.current;
+        const wellNumber = currentWellNumbers[wellIndex] ?? (wellIndex + 1);
 
         // Lock position in well center
         p.y = wellY + 20;
@@ -438,14 +462,13 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
               </g>
             )}
 
-            {/* Well Numbers (1 to 9) */}
-            {Array.from({ length: WELL_COUNT }).map((_, idx) => {
-              const wellNum = idx + 1;
+            {/* Well Numbers (1 to 9 randomized) */}
+            {wellNumbers.map((wellNum, idx) => {
               const wellX = idx * wellWidth + wellWidth / 2;
               const isLanded = landedWell === wellNum;
 
               return (
-                <g key={`well-label-${wellNum}`}>
+                <g key={`well-label-${idx}-${wellNum}`}>
                   {isLanded && (
                     <rect
                       x={idx * wellWidth + 2}
