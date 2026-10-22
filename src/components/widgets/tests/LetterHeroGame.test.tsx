@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { LetterHeroGame, isLetterSpoken, FALL_DURATION_MS } from '../LetterHeroGame';
+import { LetterHeroGame, isLetterSpoken, FALL_DURATION_MS, STRIKE_ZONE_START } from '../LetterHeroGame';
 import { playCorrectChime, playWrongSound } from '../../../utils/audioSynthesizer';
 
 // Mock audioSynthesizer to avoid AudioContext issues in JSDOM
@@ -85,7 +85,11 @@ describe('LetterHeroGame Component', () => {
     expect(screen.getByText(/Good: 1/i)).toBeDefined();
   });
 
-  it('awards "Perfect!" when hit within strike zone (progress >= 80%)', () => {
+  it('exports STRIKE_ZONE_START = 60 for expanded strike zone leniency', () => {
+    expect(STRIKE_ZONE_START).toBe(60);
+  });
+
+  it('awards "Perfect!" when hit within expanded strike zone (progress >= 60%)', () => {
     const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     const onScoreUpdate = vi.fn();
 
@@ -93,9 +97,9 @@ describe('LetterHeroGame Component', () => {
       <LetterHeroGame letters={letters} onScoreUpdate={onScoreUpdate} transcript="" interimTranscript="" />
     );
 
-    // Advance time so falling letter enters strike zone (e.g. 4.2s out of 5s = 84% progress)
+    // Advance time so falling letter enters expanded strike zone (e.g. 3.2s out of 5s = 64% progress >= 60%)
     act(() => {
-      vi.advanceTimersByTime(4200);
+      vi.advanceTimersByTime(3200);
     });
 
     // Speak "apple" for letter A
@@ -107,6 +111,24 @@ describe('LetterHeroGame Component', () => {
     expect(onScoreUpdate).toHaveBeenCalledWith(100, 'Perfect!');
     expect(screen.getByText(/100 pts/i)).toBeDefined();
     expect(screen.getByText(/Perfect: 1/i)).toBeDefined();
+  });
+
+  it('immediately removes hit letter tile from DOM to prevent streaking/ghost trails', () => {
+    const letters = ['A', 'B', 'C'];
+    const { rerender } = render(
+      <LetterHeroGame letters={letters} transcript="" interimTranscript="" />
+    );
+
+    // Initially letter A is on the track (2 instances: banner + track)
+    expect(screen.getAllByText('A').length).toBe(2);
+
+    // Speak letter A
+    rerender(
+      <LetterHeroGame letters={letters} transcript="A" interimTranscript="" />
+    );
+
+    // After hit, falling tile is removed immediately (only 1 instance remaining in top banner)
+    expect(screen.getAllByText('A').length).toBe(1);
   });
 
   it('registers "Miss" when letter reaches bottom of track without being spoken', () => {
@@ -128,7 +150,7 @@ describe('LetterHeroGame Component', () => {
   it('supports click/tap interaction on falling letter tiles', () => {
     const letters = ['X', 'Y', 'Z'];
 
-    const { container } = render(<LetterHeroGame letters={letters} />);
+    render(<LetterHeroGame letters={letters} />);
 
     // Advance slightly so letter is falling
     act(() => {
