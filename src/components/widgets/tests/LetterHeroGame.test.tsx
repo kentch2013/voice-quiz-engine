@@ -128,7 +128,7 @@ describe('LetterHeroGame Component', () => {
   it('supports click/tap interaction on falling letter tiles', () => {
     const letters = ['X', 'Y', 'Z'];
 
-    const { container } = render(<LetterHeroGame letters={letters} />);
+    render(<LetterHeroGame letters={letters} />);
 
     // Advance slightly so letter is falling
     act(() => {

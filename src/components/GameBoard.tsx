@@ -171,15 +171,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           />
         );
 
-      case 'plinko':
-        return (
-          <PlinkoBonusGame
-            {...item.widget.plinkoProps}
-            transcript={transcript}
-            interimTranscript={interimTranscript}
-            onComplete={onPlinkoComplete}
-          />
-        );
 
       default:
         return null;
