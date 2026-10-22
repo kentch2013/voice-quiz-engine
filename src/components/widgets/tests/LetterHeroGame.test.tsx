@@ -192,4 +192,21 @@ describe('LetterHeroGame Component', () => {
 
     expect(onComplete).toHaveBeenCalled();
   });
+
+  it('ensures single letter pacing and cleans up DOM elements on unmount', () => {
+    const letters = ['A', 'B', 'C'];
+    const { unmount } = render(<LetterHeroGame letters={letters} />);
+
+    // Initially at t=0 only letter 'A' is falling on track (1 banner + 1 track = 2 instances)
+    expect(screen.getAllByText('A').length).toBe(2);
+    // B and C are not falling yet (only 1 instance in top banner)
+    expect(screen.getAllByText('B').length).toBe(1);
+    expect(screen.getAllByText('C').length).toBe(1);
+
+    // Unmount component
+    unmount();
+
+    // All elements cleanly unmounted
+    expect(screen.queryByText(/Alphabet Target Banner/i)).toBeNull();
+  });
 });
