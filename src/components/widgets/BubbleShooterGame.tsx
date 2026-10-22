@@ -29,6 +29,30 @@ export const ODD_COLS = 5;
 export const TARGET_TRIPLES = 5;
 
 /**
+ * Calculate Levenshtein distance for fuzzy phonetic matching.
+ */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+/**
  * Get valid neighbor coordinates for a cell (r, c) on alternating 6/5 hex grid.
  */
 export function getHexNeighbors(r: number, c: number): HexCoord[] {
@@ -218,6 +242,16 @@ export function getCandidateOpenPositions(board: Map<string, BubbleNode>): HexCo
 }
 
 /**
+ * Calculate SVG ViewBox coordinates for hex cell centers.
+ */
+export function getHexCenterSvgCoords(r: number, c: number): { x: number; y: number } {
+  const isEven = r % 2 === 0;
+  const x = isEven ? 60 + c * 76 : 98 + c * 76;
+  const y = 36 + r * 40;
+  return { x, y };
+}
+
+/**
  * Generate initial pre-filled board (Row 0: 6, Row 1: 5, Row 2: 6 = 17 bubbles)
  * ensuring strictly integers 1..10 and NO pre-existing triples.
  */
@@ -262,39 +296,69 @@ export function createInitialBoard(): Map<string, BubbleNode> {
 }
 
 /**
- * Parse verbal voice commands for shooter controls.
+ * Parse verbal voice commands with phonetic fuzzy matching and homophones tolerance.
  */
 export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
   if (!text) return null;
   const normalized = text.toLowerCase().trim();
 
-  if (
-    normalized.includes('left') ||
-    normalized.includes('向左') ||
-    normalized.includes('左')
-  ) {
+  // Chinese & phrase matches
+  if (normalized.includes('向左') || normalized.includes('左')) {
     return 'LEFT';
   }
-
-  if (
-    normalized.includes('right') ||
-    normalized.includes('向右') ||
-    normalized.includes('右')
-  ) {
+  if (normalized.includes('向右') || normalized.includes('右')) {
     return 'RIGHT';
   }
-
   if (
-    normalized.includes('shoot') ||
-    normalized.includes('fire') ||
-    normalized.includes('shot') ||
-    normalized.includes('go') ||
-    normalized.includes('launch') ||
-    normalized.includes('bang') ||
     normalized.includes('发射') ||
-    normalized.includes('开火')
+    normalized.includes('开火') ||
+    normalized.includes('kaihuo')
   ) {
     return 'FIRE';
+  }
+
+  // Tokenize speech transcript by non-alphanumeric chars
+  const tokens = normalized.split(/[^a-z0-9]+/).filter(Boolean);
+
+  const leftKeywords = new Set(['left', 'laugh', 'lift', 'let', 'l', 'lef', 'zuo']);
+  const rightKeywords = new Set([
+    'right',
+    'light',
+    'write',
+    'rite',
+    'rot',
+    'white',
+    'ride',
+    'r',
+    'rig',
+    'you',
+    'yau',
+  ]);
+  const fireKeywords = new Set([
+    'shoot',
+    'fire',
+    'shot',
+    'chute',
+    'shute',
+    'shoo',
+    'fa',
+    'go',
+    'launch',
+    'bang',
+  ]);
+
+  for (const token of tokens) {
+    if (leftKeywords.has(token)) return 'LEFT';
+    if (rightKeywords.has(token)) return 'RIGHT';
+    if (fireKeywords.has(token)) return 'FIRE';
+
+    if (token.length >= 3) {
+      if (levenshteinDistance(token, 'left') <= 1) return 'LEFT';
+      if (levenshteinDistance(token, 'right') <= 1) return 'RIGHT';
+      if (levenshteinDistance(token, 'shoot') <= 1) return 'FIRE';
+      if (levenshteinDistance(token, 'fire') <= 1) return 'FIRE';
+      if (levenshteinDistance(token, 'shot') <= 1) return 'FIRE';
+    }
   }
 
   return null;
@@ -442,6 +506,27 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
 
   const currentTargetPos = candidatePositions[aimIndex];
 
+  // SVG Cannon and Trajectory calculation
+  const cannonX = 250;
+  const cannonY = 430;
+  const targetCoords = currentTargetPos ? getHexCenterSvgCoords(currentTargetPos.r, currentTargetPos.c) : null;
+
+  let gunRotationDeg = 0;
+  let nozzleX = cannonX;
+  let nozzleY = cannonY - 42;
+
+  if (targetCoords) {
+    const dx = targetCoords.x - cannonX;
+    const dy = targetCoords.y - cannonY;
+    const angleRad = Math.atan2(dy, dx);
+    const angleDeg = angleRad * (180 / Math.PI);
+    gunRotationDeg = angleDeg + 90;
+
+    const nozzleLen = 42;
+    nozzleX = cannonX + nozzleLen * Math.cos(angleRad);
+    nozzleY = cannonY + nozzleLen * Math.sin(angleRad);
+  }
+
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col items-center select-none">
       {/* Objective & Progress Banner */}
@@ -462,9 +547,137 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
         )}
       </div>
 
-      {/* Hex Grid Board Area */}
-      <div className="relative bg-slate-900 rounded-2xl p-4 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full max-w-[500px]">
-        <div className="flex flex-col gap-2 items-center">
+      {/* Hex Grid Board Area & SVG Cannon Overlay */}
+      <div className="relative bg-slate-900 rounded-2xl p-4 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full max-w-[500px] pb-20">
+        {/* SVG Overlay for Laser Trajectory Line & Rotating Cannon */}
+        <svg
+          viewBox="0 0 500 480"
+          className="absolute inset-0 w-full h-full pointer-events-none z-10"
+          data-testid="bubble-cannon-svg"
+        >
+          <defs>
+            <style>{`
+              @keyframes laserDash {
+                0% { stroke-dashoffset: 28; }
+                100% { stroke-dashoffset: 0; }
+              }
+              .animate-laser-dash {
+                animation: laserDash 0.8s linear infinite;
+              }
+            `}</style>
+            <filter id="laser-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <linearGradient id="cannon-metal" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#475569" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+            <linearGradient id="bubble-gradient" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#818cf8" />
+              <stop offset="100%" stopColor="#4338ca" />
+            </linearGradient>
+          </defs>
+
+          {targetCoords && (
+            <g data-testid="laser-aim-line">
+              {/* Outer Laser Glow Trajectory */}
+              <line
+                x1={nozzleX}
+                y1={nozzleY}
+                x2={targetCoords.x}
+                y2={targetCoords.y}
+                stroke="#fbbf24"
+                strokeWidth="8"
+                strokeOpacity="0.3"
+                strokeDasharray="8 6"
+                filter="url(#laser-glow)"
+              />
+              {/* Animated Laser Dotted Trajectory Line */}
+              <line
+                x1={nozzleX}
+                y1={nozzleY}
+                x2={targetCoords.x}
+                y2={targetCoords.y}
+                stroke="#f59e0b"
+                strokeWidth="4"
+                strokeDasharray="8 6"
+                className="animate-laser-dash"
+              />
+              {/* Destination Hex Highlight Ring */}
+              <circle
+                cx={targetCoords.x}
+                cy={targetCoords.y}
+                r="22"
+                fill="rgba(251, 191, 36, 0.25)"
+                stroke="#fbbf24"
+                strokeWidth="3"
+                strokeDasharray="4 4"
+                className="animate-pulse"
+                data-testid="destination-hex-highlight"
+              />
+            </g>
+          )}
+
+          {/* Rotating Bubble Gun / Cannon Body & Nozzle */}
+          <g transform={`translate(${cannonX}, ${cannonY})`} data-testid="bubble-cannon-gun">
+            {/* Cannon Pedestal Base */}
+            <path
+              d="M -30 20 C -30 0, 30 0, 30 20 Z"
+              fill="url(#cannon-metal)"
+              stroke="#475569"
+              strokeWidth="2"
+            />
+            <circle cx="0" cy="15" r="28" fill="#1e293b" stroke="#6366f1" strokeWidth="3" />
+
+            {/* Rotating Gun Barrel */}
+            <g transform={`rotate(${gunRotationDeg})`} data-testid="cannon-barrel-rotator">
+              {/* Barrel Housing */}
+              <rect
+                x="-12"
+                y="-42"
+                width="24"
+                height="42"
+                rx="6"
+                fill="#334155"
+                stroke="#818cf8"
+                strokeWidth="2"
+              />
+              {/* Nozzle Rim */}
+              <rect
+                x="-14"
+                y="-46"
+                width="28"
+                height="8"
+                rx="3"
+                fill="#475569"
+                stroke="#c084fc"
+                strokeWidth="2"
+              />
+              {/* Active Projectile Bubble Loaded inside Nozzle */}
+              <circle
+                cx="0"
+                cy="-24"
+                r="11"
+                fill="url(#bubble-gradient)"
+                stroke="#ffffff"
+                strokeWidth="2"
+              />
+              <text
+                x="0"
+                y="-20"
+                textAnchor="middle"
+                fill="#ffffff"
+                fontSize="11"
+                fontWeight="900"
+              >
+                {nextBubbleValue}
+              </text>
+            </g>
+          </g>
+        </svg>
+
+        <div className="flex flex-col gap-2 items-center relative z-0">
           {Array.from({ length: NUM_ROWS }).map((_, r) => {
             const isEven = r % 2 === 0;
             const colsCount = isEven ? EVEN_COLS : ODD_COLS;
@@ -487,11 +700,12 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
                   return (
                     <div
                       key={key}
+                      data-testid={`hex-cell-${r}-${c}`}
                       className={`relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full font-black text-base sm:text-lg transition-all duration-200 ${
                         node
                           ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-md border-2 border-indigo-300 scale-100'
                           : isTarget
-                          ? 'bg-amber-400/30 border-2 border-dashed border-amber-400 text-amber-300 animate-pulse'
+                          ? 'bg-amber-400/30 border-2 border-dashed border-amber-400 text-amber-300 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.6)]'
                           : 'bg-slate-800/40 border border-slate-700/50'
                       }`}
                     >

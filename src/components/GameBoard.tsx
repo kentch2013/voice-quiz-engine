@@ -64,7 +64,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const currentDisplayedTranscript = interimTranscript || transcript;
 
   const renderWidget = () => {
-    if (isPlinkoActive || item.widget?.type === 'plinko') {
+    if (isPlinkoActive) {
       return (
         <PlinkoBonusGame
           {...(item.widget?.plinkoProps || {})}

@@ -398,10 +398,11 @@ export function useGameEngine() {
   useEffect(() => {
     if (status !== 'playing') return;
 
-    // Snake & Letter Hero continuous play mode: bypass 30s question timer
+    // Interactive board games continuous play mode: bypass 30s question timer
     if (
       currentItem?.widget?.type === 'numbersnake' ||
-      currentItem?.widget?.type === 'letterhero'
+      currentItem?.widget?.type === 'letterhero' ||
+      currentItem?.widget?.type === 'bubbleshooter'
     ) return;
 
     const timer = setInterval(() => {

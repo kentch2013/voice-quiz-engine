@@ -1,9 +1,9 @@
 import type { QuizModule } from '../types';
 import type { GradeBand, QuizItem } from '../../types/quiz';
 
-export function generateSingleDigitSubtractionBubbleShooterItem(gradeBand: GradeBand = 'K-1'): QuizItem {
+export function generateSingleDigitSubtractionBubbleShooterItem(gradeBand: GradeBand = 'K-1', index: number = 0): QuizItem {
   return {
-    id: `sub-bubble-${Date.now()}`,
+    id: `sub-bubble-${index}-${Date.now()}`,
     topicId: 'single-digit-subtraction',
     gradeBand,
     prompt: 'Hex Bubble Shooter Math Game',
@@ -27,8 +27,8 @@ export function generateSingleDigitSubtractionBubbleShooterItem(gradeBand: Grade
 export function generateSingleDigitSubtractionItems(gradeBand: GradeBand = 'K-1', count: number = 10): QuizItem[] {
   const items: QuizItem[] = [];
   for (let i = 0; i < count; i++) {
-    if (count >= 10 && i === 0) {
-      items.push(generateSingleDigitSubtractionBubbleShooterItem(gradeBand));
+    if (count >= 10) {
+      items.push(generateSingleDigitSubtractionBubbleShooterItem(gradeBand, i));
       continue;
     }
 
