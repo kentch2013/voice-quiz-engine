@@ -297,31 +297,52 @@ export function createInitialBoard(): Map<string, BubbleNode> {
 }
 
 /**
- * Parse verbal voice commands with phonetic fuzzy matching and homophones tolerance.
+ * Tokenize speech transcript string into individual word / character tokens.
  */
-export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
-  if (!text) return null;
+export function tokenizeTranscript(text: string): string[] {
+  if (!text) return [];
   const normalized = text.toLowerCase().trim();
+  if (!normalized) return [];
 
-  // Chinese & phrase matches
-  if (normalized.includes('向左') || normalized.includes('左')) {
-    return 'LEFT';
+  // Match CJK characters individually or words separated by whitespace/punctuation
+  const rawTokens = normalized.split(/[\s,.\-!_?]+/).filter(Boolean);
+  const result: string[] = [];
+
+  for (const raw of rawTokens) {
+    if (/[\u4e00-\u9fa5]/.test(raw)) {
+      if (raw === '向左' || raw === '向右' || raw === '发射' || raw === '开火' || raw === 'kaihuo') {
+        result.push(raw);
+      } else {
+        for (const char of raw) {
+          result.push(char);
+        }
+      }
+    } else {
+      result.push(raw);
+    }
   }
-  if (normalized.includes('向右') || normalized.includes('右')) {
-    return 'RIGHT';
-  }
+
+  return result;
+}
+
+/**
+ * Parse a single word token for aiming / shooting actions.
+ */
+export function parseSingleToken(token: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
+  if (!token) return null;
+  const normalized = token.toLowerCase().trim();
+
+  // Chinese & pinyin matches
+  if (normalized === '向左' || normalized === '左' || normalized === 'zuo') return 'LEFT';
+  if (normalized === '向右' || normalized === '右' || normalized === 'you' || normalized === 'yau') return 'RIGHT';
   if (
-    normalized.includes('发射') ||
-    normalized.includes('开火') ||
-    normalized.includes('kaihuo')
-  ) {
-    return 'FIRE';
-  }
+    normalized === '发射' ||
+    normalized === '开火' ||
+    normalized === 'kaihuo' ||
+    normalized === 'fa'
+  ) return 'FIRE';
 
-  // Tokenize speech transcript by non-alphanumeric chars
-  const tokens = normalized.split(/[^a-z0-9]+/).filter(Boolean);
-
-  const leftKeywords = new Set(['left', 'laugh', 'lift', 'let', 'l', 'lef', 'zuo']);
+  const leftKeywords = new Set(['left', 'laugh', 'lift', 'let', 'l', 'lef']);
   const rightKeywords = new Set([
     'right',
     'light',
@@ -332,8 +353,6 @@ export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null
     'ride',
     'r',
     'rig',
-    'you',
-    'yau',
   ]);
   const fireKeywords = new Set([
     'shoot',
@@ -342,25 +361,36 @@ export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null
     'chute',
     'shute',
     'shoo',
-    'fa',
     'go',
     'launch',
     'bang',
   ]);
 
-  for (let i = tokens.length - 1; i >= 0; i--) {
-    const token = tokens[i];
-    if (leftKeywords.has(token)) return 'LEFT';
-    if (rightKeywords.has(token)) return 'RIGHT';
-    if (fireKeywords.has(token)) return 'FIRE';
+  if (leftKeywords.has(normalized)) return 'LEFT';
+  if (rightKeywords.has(normalized)) return 'RIGHT';
+  if (fireKeywords.has(normalized)) return 'FIRE';
 
-    if (token.length >= 3) {
-      if (levenshteinDistance(token, 'left') <= 1) return 'LEFT';
-      if (levenshteinDistance(token, 'right') <= 1) return 'RIGHT';
-      if (levenshteinDistance(token, 'shoot') <= 1) return 'FIRE';
-      if (levenshteinDistance(token, 'fire') <= 1) return 'FIRE';
-      if (levenshteinDistance(token, 'shot') <= 1) return 'FIRE';
-    }
+  if (normalized.length >= 3) {
+    if (levenshteinDistance(normalized, 'left') <= 1) return 'LEFT';
+    if (levenshteinDistance(normalized, 'right') <= 1) return 'RIGHT';
+    if (levenshteinDistance(normalized, 'shoot') <= 1) return 'FIRE';
+    if (normalized !== 'free' && levenshteinDistance(normalized, 'fire') <= 1) return 'FIRE';
+    if (levenshteinDistance(normalized, 'shot') <= 1) return 'FIRE';
+  }
+
+  return null;
+}
+
+/**
+ * Parse verbal voice commands with phonetic fuzzy matching and homophones tolerance.
+ */
+export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
+  if (!text) return null;
+  const tokens = tokenizeTranscript(text);
+
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const action = parseSingleToken(tokens[i]);
+    if (action) return action;
   }
 
   return null;
@@ -380,7 +410,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  const lastProcessedVoiceRef = useRef<string>('');
+  const processedTokensRef = useRef<(string | null)[]>([]);
   const boardRef = useRef(board);
   boardRef.current = board;
 
@@ -482,27 +512,39 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
     setNextBubbleValue(Math.floor(Math.random() * 10) + 1);
   }, [isCompleted, candidatePositions, aimIndex, nextBubbleValue, targetTriplesCount, onComplete]);
 
-  // Voice transcript control handler
+  // Voice transcript control handler (word-by-word instant processing)
   useEffect(() => {
     const combined = `${transcript} ${interimTranscript}`.trim();
     if (!combined) {
-      lastProcessedVoiceRef.current = '';
+      processedTokensRef.current = [];
       return;
     }
 
-    let newText = combined;
-    if (lastProcessedVoiceRef.current && combined.startsWith(lastProcessedVoiceRef.current)) {
-      newText = combined.slice(lastProcessedVoiceRef.current.length).trim();
+    const tokens = tokenizeTranscript(combined);
+    const finalTokenCount = tokenizeTranscript(transcript).length;
+
+    if (tokens.length < processedTokensRef.current.length) {
+      processedTokensRef.current = processedTokensRef.current.slice(0, tokens.length);
     }
 
-    if (!newText) return;
+    for (let i = 0; i < tokens.length; i++) {
+      if (processedTokensRef.current[i] !== undefined && processedTokensRef.current[i] !== null) {
+        continue;
+      }
 
-    const action = parseVoiceAction(newText) || parseVoiceAction(combined);
-    if (action) {
-      lastProcessedVoiceRef.current = combined;
-      if (action === 'LEFT') handleAimLeft();
-      else if (action === 'RIGHT') handleAimRight();
-      else if (action === 'FIRE') handleShoot();
+      const token = tokens[i];
+      const action = parseSingleToken(token);
+
+      if (action) {
+        processedTokensRef.current[i] = token;
+        if (action === 'LEFT') handleAimLeft();
+        else if (action === 'RIGHT') handleAimRight();
+        else if (action === 'FIRE') handleShoot();
+      } else {
+        if (i < finalTokenCount) {
+          processedTokensRef.current[i] = null;
+        }
+      }
     }
   }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleShoot]);
 
