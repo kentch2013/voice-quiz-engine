@@ -48,8 +48,9 @@ function generatePegs(): Peg[] {
 
   for (let r = 0; r < rows; r++) {
     const y = startY + r * rowHeight;
-    const count = r % 2 === 0 ? 7 : 8;
-    const padding = r % 2 === 0 ? 35 : 15;
+    const isEven = r % 2 === 0;
+    const count = isEven ? 7 : 6;
+    const padding = isEven ? 50 : 75;
     const spacing = (BOARD_WIDTH - 2 * padding) / (count - 1);
 
     for (let c = 0; c < count; c++) {
@@ -243,9 +244,18 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
       if (p.x < leftBound) {
         p.x = leftBound;
         p.vx = -p.vx * restitution;
+        if (Math.abs(p.vx) < 0.2) p.vx = 0.4;
       } else if (p.x > rightBound) {
         p.x = rightBound;
         p.vx = -p.vx * restitution;
+        if (Math.abs(p.vx) < 0.2) p.vx = -0.4;
+      }
+
+      // Anti-jamming / unsticking measure: nudge downward & deflect horizontally if downward speed stalls near zero while dropping
+      if (p.y > 60 && p.y < wellY && Math.abs(p.vy) < 0.2) {
+        p.vy += 0.3 * dt;
+        const deflectionDir = p.x < BOARD_WIDTH / 2 ? 1 : -1;
+        p.vx += (Math.random() * 0.4 + 0.2) * deflectionDir * dt;
       }
 
       // Check collisions against pegs
