@@ -110,6 +110,8 @@ export function App() {
                   keypadInput={keypadInput}
                   language={language}
                   onLanguageChange={setLanguage}
+                  clearTranscript={voiceRecognition.clearTranscript}
+                  resetTranscript={voiceRecognition.resetTranscript}
                   onOptionSelect={handleOptionSelect}
                   onReadAloud={() =>
                     tts.speak(getTTSPrompt(currentItem, language, currentIndex))

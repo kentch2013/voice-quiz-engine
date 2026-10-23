@@ -10,6 +10,8 @@ export interface BubbleShooterGameProps extends BubbleShooterProps {
   onComplete?: () => void;
   targetTriplesCount?: number;
   onTripleMatched?: () => void;
+  clearTranscript?: () => void;
+  resetTranscript?: () => void;
 }
 
 export interface HexCoord {
@@ -566,11 +568,14 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   onComplete,
   targetTriplesCount = TARGET_TRIPLES,
   onTripleMatched,
+  clearTranscript,
+  resetTranscript,
 }) => {
   const [board, setBoard] = useState<Map<string, BubbleNode>>(() => createInitialBoard());
   const [clearedTriples, setClearedTriples] = useState<number>(0);
   const [nextBubbleValue, setNextBubbleValue] = useState<number>(() => Math.floor(Math.random() * 10) + 1);
   const [aimIndex, setAimIndex] = useState<number>(0);
+  const [poppingKeys, setPoppingKeys] = useState<Set<string>>(new Set());
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [boundaryBounce, setBoundaryBounce] = useState<'LEFT' | 'RIGHT' | null>(null);
@@ -693,40 +698,59 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
       const floatingCoords = findFloatingBubbles(newBoard);
       floatingCoords.forEach((c) => newBoard.delete(coordKey(c.r, c.c)));
 
+      // Trigger slow bubble pop / fade animation
+      setPoppingKeys(popCoordsSet);
+
       const triplesMatchedCount = matchedTriangles.length;
       for (let i = 0; i < triplesMatchedCount; i++) {
         onTripleMatchedRef.current?.();
       }
 
-      setClearedTriples((prev) => {
-        const nextTotal = prev + triplesMatchedCount;
-        if (nextTotal >= targetTriplesCountRef.current || newBoard.size === 0) {
-          setIsCompleted(true);
-          isCompletedRef.current = true;
-          try {
-            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-          } catch {
-            // Ignore if confetti unavailable in test env
-          }
-          setTimeout(() => onCompleteRef.current?.(), 1500);
-        }
-        return nextTotal;
-      });
-
       setFeedbackMsg(`💥 Number Fact Matched! (+${triplesMatchedCount})`);
-      setTimeout(() => setFeedbackMsg(null), 1500);
+
+      setTimeout(() => {
+        // Pop matched bubbles from board after animation
+        popCoordsSet.forEach((key) => newBoard.delete(key));
+
+        // Gravity / Floating check: drop unanchored bubbles
+        const floatingCoords = findFloatingBubbles(newBoard);
+        floatingCoords.forEach((c) => newBoard.delete(coordKey(c.r, c.c)));
+
+        setBoard(newBoard);
+        setPoppingKeys(new Set());
+
+        setClearedTriples((prev) => {
+          const nextTotal = prev + triplesMatchedCount;
+          if (nextTotal >= targetTriplesCountRef.current || newBoard.size === 0) {
+            setIsCompleted(true);
+            isCompletedRef.current = true;
+            try {
+              confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            } catch {
+              // Ignore if confetti unavailable in test env
+            }
+            setTimeout(() => onCompleteRef.current?.(), 1500);
+          }
+          return nextTotal;
+        });
+
+        // Generate next bubble value 1..10
+        const nextVal = Math.floor(Math.random() * 10) + 1;
+        setNextBubbleValue(nextVal);
+        nextBubbleValueRef.current = nextVal;
+        setFeedbackMsg(null);
+      }, 400); // 400ms slow pop / fade animation delay before loading next projectile
     } else {
       playWrongSound();
+      setBoard(newBoard);
+      // Generate next bubble value 1..10
+      const nextVal = Math.floor(Math.random() * 10) + 1;
+      setNextBubbleValue(nextVal);
+      nextBubbleValueRef.current = nextVal;
     }
-
-    setBoard(newBoard);
-    // Generate next bubble value 1..10
-    const nextVal = Math.floor(Math.random() * 10) + 1;
-    setNextBubbleValue(nextVal);
-    nextBubbleValueRef.current = nextVal;
   }, []);
 
-  // Voice transcript control handler (word-by-word instant processing)
+  // Voice transcript control handler (word-by-word instant processing with Solution A reset)
   useEffect(() => {
     const combined = `${transcript} ${interimTranscript}`.trim();
     if (!combined) {
@@ -750,8 +774,15 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
         else if (action === 'FIRE') handleShoot();
       }
       processedCommandCountRef.current = commands.length;
+
+      // Solution A: immediately reset/flush speech recognition state for next word
+      if (resetTranscript) {
+        resetTranscript();
+      } else if (clearTranscript) {
+        clearTranscript();
+      }
     }
-  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleAimMaxLeft, handleAimMaxRight, handleShoot]);
+  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleAimMaxLeft, handleAimMaxRight, handleShoot, clearTranscript, resetTranscript]);
 
   // Keyboard controls
   useEffect(() => {
@@ -887,18 +918,6 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
                 strokeDasharray="8 6"
                 className="animate-laser-dash"
               />
-              {/* Destination Hex Highlight Ring */}
-              <circle
-                cx={targetCoords.x}
-                cy={targetCoords.y}
-                r="22"
-                fill="rgba(251, 191, 36, 0.25)"
-                stroke="#fbbf24"
-                strokeWidth="3"
-                strokeDasharray="4 4"
-                className="animate-pulse"
-                data-testid="destination-hex-highlight"
-              />
             </g>
           )}
 
@@ -906,21 +925,22 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
           <g transform={`translate(${cannonX}, ${cannonY})`} data-testid="bubble-cannon-gun">
             {/* Cannon Pedestal Base */}
             <path
-              d="M -30 20 C -30 0, 30 0, 30 20 Z"
+              d="M -30 15 C -30 -5, 30 -5, 30 15 Z"
               fill="url(#cannon-metal)"
               stroke="#475569"
               strokeWidth="2"
             />
-            <circle cx="0" cy="15" r="28" fill="#1e293b" stroke="#6366f1" strokeWidth="3" />
+            {/* Concentric Blue Base Circle */}
+            <circle cx="0" cy="0" r="28" fill="#1e293b" stroke="#6366f1" strokeWidth="3" />
 
             {/* Rotating Gun Barrel */}
             <g transform={`rotate(${gunRotationDeg})`} data-testid="cannon-barrel-rotator">
               {/* Barrel Housing */}
               <rect
                 x="-25"
-                y="-56"
+                y="-52"
                 width="50"
-                height="56"
+                height="52"
                 rx="8"
                 fill="#334155"
                 stroke="#818cf8"
@@ -929,7 +949,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
               {/* Nozzle Rim */}
               <rect
                 x="-27"
-                y="-62"
+                y="-58"
                 width="54"
                 height="10"
                 rx="4"
@@ -940,7 +960,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
               {/* Active Projectile Bubble Loaded inside Nozzle */}
               <circle
                 cx="0"
-                cy="-30"
+                cy="-28"
                 r="22"
                 fill="url(#bubble-gradient)"
                 stroke="#ffffff"
@@ -948,7 +968,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
               />
               <text
                 x="0"
-                y="-23"
+                y="-21"
                 textAnchor="middle"
                 fill="#ffffff"
                 fontSize="20"
@@ -980,12 +1000,16 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
                     currentTargetPos.r === r &&
                     currentTargetPos.c === c;
 
+                  const isPopping = poppingKeys.has(key);
+
                   return (
                     <div
                       key={key}
-                      data-testid={`hex-cell-${r}-${c}`}
+                      data-testid={isTarget ? 'destination-hex-highlight' : `hex-cell-${r}-${c}`}
                       className={`relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full font-black text-base sm:text-lg transition-all duration-200 ${
-                        node
+                        isPopping
+                          ? 'scale-125 opacity-0 bg-amber-400 text-amber-900 border-2 border-amber-300 transition-all duration-500 ease-out animate-ping'
+                          : node
                           ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-md border-2 border-indigo-300 scale-100'
                           : isTarget
                           ? 'bg-amber-400/30 border-2 border-dashed border-amber-400 text-amber-300 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.6)]'

@@ -38,6 +38,8 @@ interface GameBoardProps {
   onEatTarget?: (targetValue: number, eatenCount: number) => void;
   onSnakeComplete?: () => void;
   onPlinkoComplete?: (wellNumber: number) => void;
+  clearTranscript?: () => void;
+  resetTranscript?: () => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -60,6 +62,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onEatTarget,
   onSnakeComplete,
   onPlinkoComplete,
+  clearTranscript,
+  resetTranscript,
 }) => {
   const currentDisplayedTranscript = interimTranscript || transcript;
 
@@ -191,6 +195,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             {...item.widget.bubbleShooterProps}
             transcript={transcript}
             interimTranscript={interimTranscript}
+            clearTranscript={clearTranscript}
+            resetTranscript={resetTranscript}
             onTripleMatched={() => {
               // Advance twice on question progress bar per matched triple
               onEatTarget?.(0, 0);

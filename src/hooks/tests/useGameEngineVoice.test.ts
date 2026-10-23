@@ -248,4 +248,29 @@ describe('Audio Pipeline & Mute Guard in useGameEngine', () => {
     // mockSpeak call count should remain unchanged (TTS suppressed)
     expect(mockSpeak.mock.calls.length).toBe(initialSpeakCalls);
   });
+
+  it('suppresses instruction TTS on mid-game progress in Bubble Shooter mode', async () => {
+    const { result } = renderHook(() => useGameEngine());
+
+    act(() => {
+      result.current.setSelectedTopicId('single-digit-addition');
+    });
+
+    await act(async () => {
+      result.current.startGame();
+    });
+
+    expect(result.current.status).toBe('playing');
+    expect(result.current.currentItem?.widget?.type).toBe('bubbleshooter');
+
+    const initialSpeakCalls = mockSpeak.mock.calls.length;
+    expect(initialSpeakCalls).toBeGreaterThanOrEqual(1);
+
+    await act(async () => {
+      result.current.reportTargetEaten(0);
+    });
+
+    expect(result.current.currentIndex).toBe(1);
+    expect(mockSpeak.mock.calls.length).toBe(initialSpeakCalls);
+  });
 });
