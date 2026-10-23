@@ -256,7 +256,7 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
               // Ignore if already running
             }
           }
-        }, 300);
+        }, 0);
       }
     };
 
@@ -336,12 +336,8 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
     clearSilenceTimer();
     setTranscript('');
     setInterimTranscript('');
-    if (recognitionRef.current && shouldListenRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {
-        // Ignore
-      }
+    if (onTranscriptChangeRef.current) {
+      onTranscriptChangeRef.current('');
     }
   }, [clearSilenceTimer]);
 

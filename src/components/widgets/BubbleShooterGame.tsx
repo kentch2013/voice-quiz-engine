@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { ArrowLeft, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import type { BubbleShooterProps } from '../../types/quiz';
@@ -249,8 +249,8 @@ export function getCandidateOpenPositions(board: Map<string, BubbleNode>): HexCo
  */
 export function getHexCenterSvgCoords(r: number, c: number): { x: number; y: number } {
   const isEven = r % 2 === 0;
-  const x = isEven ? 60 + c * 76 : 98 + c * 76;
-  const y = 36 + r * 40;
+  const x = isEven ? 110 + c * 56 : 138 + c * 56;
+  const y = 40 + r * 56;
   return { x, y };
 }
 
@@ -606,6 +606,40 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   const candidatePositionsRef = useRef(candidatePositions);
   candidatePositionsRef.current = candidatePositions;
 
+  const boardContainerRef = useRef<HTMLDivElement | null>(null);
+  const targetHexRef = useRef<HTMLDivElement | null>(null);
+  const [dynamicTargetCoords, setDynamicTargetCoords] = useState<{ x: number; y: number } | null>(null);
+
+  const updateTargetCoords = useCallback(() => {
+    if (boardContainerRef.current && targetHexRef.current) {
+      const containerRect = boardContainerRef.current.getBoundingClientRect();
+      const targetRect = targetHexRef.current.getBoundingClientRect();
+      if (
+        containerRect.width > 0 &&
+        containerRect.height > 0 &&
+        targetRect.width > 0 &&
+        targetRect.height > 0
+      ) {
+        const targetCenterX = targetRect.left + targetRect.width / 2 - containerRect.left;
+        const targetCenterY = targetRect.top + targetRect.height / 2 - containerRect.top;
+        const x = (targetCenterX / containerRect.width) * 500;
+        const y = (targetCenterY / containerRect.height) * 480;
+        setDynamicTargetCoords({ x, y });
+        return;
+      }
+    }
+    setDynamicTargetCoords(null);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateTargetCoords();
+  }, [aimIndex, candidatePositions, updateTargetCoords]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateTargetCoords);
+    return () => window.removeEventListener('resize', updateTargetCoords);
+  }, [updateTargetCoords]);
+
   // Keep aim index bounded when candidate positions change
   useEffect(() => {
     if (candidatePositions.length > 0 && aimIndex >= candidatePositions.length) {
@@ -750,7 +784,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
     }
   }, []);
 
-  // Voice transcript control handler (word-by-word instant processing with Solution A reset)
+  // Voice transcript control handler (word-by-word instant processing with streaming token offset)
   useEffect(() => {
     const combined = `${transcript} ${interimTranscript}`.trim();
     if (!combined) {
@@ -774,15 +808,8 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
         else if (action === 'FIRE') handleShoot();
       }
       processedCommandCountRef.current = commands.length;
-
-      // Solution A: immediately reset/flush speech recognition state for next word
-      if (resetTranscript) {
-        resetTranscript();
-      } else if (clearTranscript) {
-        clearTranscript();
-      }
     }
-  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleAimMaxLeft, handleAimMaxRight, handleShoot, clearTranscript, resetTranscript]);
+  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleAimMaxLeft, handleAimMaxRight, handleShoot]);
 
   // Keyboard controls
   useEffect(() => {
@@ -818,7 +845,8 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   // SVG Cannon and Trajectory calculation
   const cannonX = 250;
   const cannonY = 430;
-  const targetCoords = currentTargetPos ? getHexCenterSvgCoords(currentTargetPos.r, currentTargetPos.c) : null;
+  const staticTargetCoords = currentTargetPos ? getHexCenterSvgCoords(currentTargetPos.r, currentTargetPos.c) : null;
+  const targetCoords = dynamicTargetCoords || staticTargetCoords;
 
   let gunRotationDeg = 0;
   let nozzleX = cannonX;
@@ -855,6 +883,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
 
       {/* Hex Grid Board Area & SVG Cannon Overlay */}
       <div
+        ref={boardContainerRef}
         className={`relative bg-slate-900 rounded-2xl p-4 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full max-w-[500px] pb-20 transition-transform ${
           boundaryBounce === 'LEFT'
             ? '-translate-x-3 duration-100 ease-in-out'
@@ -1005,6 +1034,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
                   return (
                     <div
                       key={key}
+                      ref={isTarget ? targetHexRef : null}
                       data-testid={isTarget ? 'destination-hex-highlight' : `hex-cell-${r}-${c}`}
                       className={`relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full font-black text-base sm:text-lg transition-all duration-200 ${
                         isPopping

@@ -322,7 +322,7 @@ describe('BubbleShooterGame UI Component', () => {
     });
   });
 
-  it('invokes clearTranscript / resetTranscript callback when voice action command is dispatched (Solution A)', () => {
+  it('processes streaming token offset voice actions continuously without calling resetTranscript or aborting recognition', () => {
     const clearTranscriptMock = vi.fn();
     const resetTranscriptMock = vi.fn();
 
@@ -346,7 +346,9 @@ describe('BubbleShooterGame UI Component', () => {
       );
     });
 
-    expect(resetTranscriptMock).toHaveBeenCalled();
+    // resetTranscript/clearTranscript are no longer called per-command so SpeechRecognition stays open continuously
+    expect(resetTranscriptMock).not.toHaveBeenCalled();
+    expect(clearTranscriptMock).not.toHaveBeenCalled();
   });
 
   it('persists board state continuously across multiple questions/progress increments in GameBoard', () => {
