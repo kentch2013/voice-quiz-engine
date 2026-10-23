@@ -226,7 +226,8 @@ export const PlinkoBonusGame: React.FC<PlinkoBonusGameProps> = ({
     let lastTime = performance.now();
 
     const updatePhysics = (time: number) => {
-      const dt = Math.min((time - lastTime) / 16.66, 2.0); // normalize dt to 60fps
+      const rawDt = (time - lastTime) / 16.66;
+      const dt = rawDt > 0 && !isNaN(rawDt) ? Math.min(rawDt, 2.0) : 1.0; // normalize dt to 60fps with test fallback
       lastTime = time;
 
       const p = ballPhysicsRef.current;

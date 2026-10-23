@@ -322,6 +322,33 @@ describe('BubbleShooterGame UI Component', () => {
     });
   });
 
+  it('invokes clearTranscript / resetTranscript callback when voice action command is dispatched (Solution A)', () => {
+    const clearTranscriptMock = vi.fn();
+    const resetTranscriptMock = vi.fn();
+
+    const { rerender } = render(
+      <BubbleShooterGame
+        transcript=""
+        interimTranscript=""
+        clearTranscript={clearTranscriptMock}
+        resetTranscript={resetTranscriptMock}
+      />
+    );
+
+    act(() => {
+      rerender(
+        <BubbleShooterGame
+          transcript="right"
+          interimTranscript=""
+          clearTranscript={clearTranscriptMock}
+          resetTranscript={resetTranscriptMock}
+        />
+      );
+    });
+
+    expect(resetTranscriptMock).toHaveBeenCalled();
+  });
+
   it('persists board state continuously across multiple questions/progress increments in GameBoard', () => {
     const dummyItem1: QuizItem = {
       id: 'item-1',
