@@ -248,6 +248,35 @@ describe('BubbleShooterGame UI Component', () => {
     });
   });
 
+  it('reliably executes unlimited consecutive identical voice commands (e.g., multiple right/left/fire spoken consecutively)', () => {
+    const { rerender } = render(<BubbleShooterGame transcript="" interimTranscript="" />);
+
+    // Saying 5 'right' commands in a row
+    act(() => {
+      rerender(<BubbleShooterGame transcript="" interimTranscript="right right right right right" />);
+    });
+
+    // Finalizing 'right right right right right' and adding 3 'left's in interim
+    act(() => {
+      rerender(
+        <BubbleShooterGame
+          transcript="right right right right right"
+          interimTranscript="left left left"
+        />
+      );
+    });
+
+    // Finalizing all and shooting
+    act(() => {
+      rerender(
+        <BubbleShooterGame
+          transcript="right right right right right left left left shoot shoot"
+          interimTranscript=""
+        />
+      );
+    });
+  });
+
   it('persists board state continuously across multiple questions/progress increments in GameBoard', () => {
     const dummyItem1: QuizItem = {
       id: 'item-1',
