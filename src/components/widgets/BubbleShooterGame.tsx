@@ -382,18 +382,30 @@ export function parseSingleToken(token: string): 'LEFT' | 'RIGHT' | 'FIRE' | nul
 }
 
 /**
+ * Extract all voice action commands sequentially from transcript text.
+ */
+export function extractVoiceCommands(text: string): ('LEFT' | 'RIGHT' | 'FIRE')[] {
+  if (!text) return [];
+  const tokens = tokenizeTranscript(text);
+  const commands: ('LEFT' | 'RIGHT' | 'FIRE')[] = [];
+
+  for (const token of tokens) {
+    const action = parseSingleToken(token);
+    if (action) {
+      commands.push(action);
+    }
+  }
+
+  return commands;
+}
+
+/**
  * Parse verbal voice commands with phonetic fuzzy matching and homophones tolerance.
  */
 export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
   if (!text) return null;
-  const tokens = tokenizeTranscript(text);
-
-  for (let i = tokens.length - 1; i >= 0; i--) {
-    const action = parseSingleToken(tokens[i]);
-    if (action) return action;
-  }
-
-  return null;
+  const commands = extractVoiceCommands(text);
+  return commands.length > 0 ? commands[commands.length - 1] : null;
 }
 
 export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
@@ -410,14 +422,31 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  const processedTokensRef = useRef<(string | null)[]>([]);
+  const processedCommandCountRef = useRef<number>(0);
   const boardRef = useRef(board);
   boardRef.current = board;
 
   const aimIndexRef = useRef(aimIndex);
   aimIndexRef.current = aimIndex;
 
+  const isCompletedRef = useRef(isCompleted);
+  isCompletedRef.current = isCompleted;
+
+  const nextBubbleValueRef = useRef(nextBubbleValue);
+  nextBubbleValueRef.current = nextBubbleValue;
+
+  const targetTriplesCountRef = useRef(targetTriplesCount);
+  targetTriplesCountRef.current = targetTriplesCount;
+
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  const onTripleMatchedRef = useRef(onTripleMatched);
+  onTripleMatchedRef.current = onTripleMatched;
+
   const candidatePositions = useMemo(() => getCandidateOpenPositions(board), [board]);
+  const candidatePositionsRef = useRef(candidatePositions);
+  candidatePositionsRef.current = candidatePositions;
 
   // Keep aim index bounded when candidate positions change
   useEffect(() => {
@@ -438,20 +467,21 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
 
   const handleAimRight = useCallback(() => {
     setAimIndex((prev) => {
-      const next = Math.min(candidatePositions.length - 1, prev + 1);
+      const maxIdx = Math.max(0, candidatePositionsRef.current.length - 1);
+      const next = Math.min(maxIdx, prev + 1);
       aimIndexRef.current = next;
       return next;
     });
-  }, [candidatePositions.length]);
+  }, []);
 
   const handleShoot = useCallback(() => {
-    if (isCompleted || candidatePositions.length === 0) return;
+    if (isCompletedRef.current || candidatePositionsRef.current.length === 0) return;
 
     const currentAimIndex = aimIndexRef.current;
-    const targetPos = candidatePositions[currentAimIndex] || candidatePositions[0];
+    const targetPos = candidatePositionsRef.current[currentAimIndex] || candidatePositionsRef.current[0];
     if (!targetPos) return;
 
-    const currentVal = nextBubbleValue;
+    const currentVal = nextBubbleValueRef.current;
     const newBubble: BubbleNode = {
       id: `bubble-${Date.now()}`,
       r: targetPos.r,
@@ -484,19 +514,20 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
 
       const triplesMatchedCount = matchedTriangles.length;
       for (let i = 0; i < triplesMatchedCount; i++) {
-        onTripleMatched?.();
+        onTripleMatchedRef.current?.();
       }
 
       setClearedTriples((prev) => {
         const nextTotal = prev + triplesMatchedCount;
-        if (nextTotal >= targetTriplesCount || newBoard.size === 0) {
+        if (nextTotal >= targetTriplesCountRef.current || newBoard.size === 0) {
           setIsCompleted(true);
+          isCompletedRef.current = true;
           try {
             confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
           } catch {
             // Ignore if confetti unavailable in test env
           }
-          setTimeout(() => onComplete?.(), 1500);
+          setTimeout(() => onCompleteRef.current?.(), 1500);
         }
         return nextTotal;
       });
@@ -509,42 +540,33 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
 
     setBoard(newBoard);
     // Generate next bubble value 1..10
-    setNextBubbleValue(Math.floor(Math.random() * 10) + 1);
-  }, [isCompleted, candidatePositions, aimIndex, nextBubbleValue, targetTriplesCount, onComplete]);
+    const nextVal = Math.floor(Math.random() * 10) + 1;
+    setNextBubbleValue(nextVal);
+    nextBubbleValueRef.current = nextVal;
+  }, []);
 
   // Voice transcript control handler (word-by-word instant processing)
   useEffect(() => {
     const combined = `${transcript} ${interimTranscript}`.trim();
     if (!combined) {
-      processedTokensRef.current = [];
+      processedCommandCountRef.current = 0;
       return;
     }
 
-    const tokens = tokenizeTranscript(combined);
-    const finalTokenCount = tokenizeTranscript(transcript).length;
+    const commands = extractVoiceCommands(combined);
 
-    if (tokens.length < processedTokensRef.current.length) {
-      processedTokensRef.current = processedTokensRef.current.slice(0, tokens.length);
+    if (commands.length < processedCommandCountRef.current) {
+      processedCommandCountRef.current = commands.length;
     }
 
-    for (let i = 0; i < tokens.length; i++) {
-      if (processedTokensRef.current[i] !== undefined && processedTokensRef.current[i] !== null) {
-        continue;
-      }
-
-      const token = tokens[i];
-      const action = parseSingleToken(token);
-
-      if (action) {
-        processedTokensRef.current[i] = token;
+    if (commands.length > processedCommandCountRef.current) {
+      for (let i = processedCommandCountRef.current; i < commands.length; i++) {
+        const action = commands[i];
         if (action === 'LEFT') handleAimLeft();
         else if (action === 'RIGHT') handleAimRight();
         else if (action === 'FIRE') handleShoot();
-      } else {
-        if (i < finalTokenCount) {
-          processedTokensRef.current[i] = null;
-        }
       }
+      processedCommandCountRef.current = commands.length;
     }
   }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleShoot]);
 
