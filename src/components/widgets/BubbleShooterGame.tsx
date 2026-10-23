@@ -296,6 +296,8 @@ export function createInitialBoard(): Map<string, BubbleNode> {
   return board;
 }
 
+export type VoiceCommand = 'LEFT' | 'RIGHT' | 'FIRE' | 'MAX_LEFT' | 'MAX_RIGHT';
+
 /**
  * Tokenize speech transcript string into individual word / character tokens.
  */
@@ -304,17 +306,27 @@ export function tokenizeTranscript(text: string): string[] {
   const normalized = text.toLowerCase().trim();
   if (!normalized) return [];
 
-  // Match CJK characters individually or words separated by whitespace/punctuation
   const rawTokens = normalized.split(/[\s,.\-!_?]+/).filter(Boolean);
   const result: string[] = [];
 
+  const cjkMultiTokens = ['最左', '最右', '向左', '向右', '发射', '开火', 'zuizuo', 'zuiyou', 'kaihuo'];
+
   for (const raw of rawTokens) {
     if (/[\u4e00-\u9fa5]/.test(raw)) {
-      if (raw === '向左' || raw === '向右' || raw === '发射' || raw === '开火' || raw === 'kaihuo') {
-        result.push(raw);
-      } else {
-        for (const char of raw) {
-          result.push(char);
+      let remaining = raw;
+      while (remaining.length > 0) {
+        let matched = false;
+        for (const multi of cjkMultiTokens) {
+          if (remaining.startsWith(multi)) {
+            result.push(multi);
+            remaining = remaining.slice(multi.length);
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          result.push(remaining[0]);
+          remaining = remaining.slice(1);
         }
       }
     } else {
@@ -326,11 +338,42 @@ export function tokenizeTranscript(text: string): string[] {
 }
 
 /**
+ * Convert number words (English/Chinese) or numeric digits into numbers.
+ */
+export function parseNumberWord(token: string): number | null {
+  if (!token) return null;
+  const norm = token.toLowerCase().trim();
+
+  if (/^\d+$/.test(norm)) {
+    const n = parseInt(norm, 10);
+    return n > 0 && n <= 20 ? n : null;
+  }
+
+  const numMap: Record<string, number> = {
+    one: 1, '1': 1, 一: 1, '1个': 1, 一个: 1,
+    two: 2, '2': 2, 二: 2, 两: 2, '2个': 2, 两个: 2,
+    three: 3, '3': 3, 三: 3, '3个': 3, 三个: 3,
+    four: 4, '4': 4, 四: 4, '4个': 4, 四个: 4,
+    five: 5, '5': 5, 五: 5, '5个': 5, 五个: 5,
+    six: 6, '6': 6, 六: 6, '6个': 6, 六个: 6,
+    seven: 7, '7': 7, 七: 7, '7个': 7, 七个: 7,
+    eight: 8, '8': 8, 八: 8, '8个': 8, 八个: 8,
+    nine: 9, '9': 9, 九: 9, '9个': 9, 九个: 9,
+    ten: 10, '10': 10, 十: 10, '10个': 10, 十个: 10,
+  };
+
+  return numMap[norm] ?? null;
+}
+
+/**
  * Parse a single word token for aiming / shooting actions.
  */
-export function parseSingleToken(token: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
+export function parseSingleToken(token: string): VoiceCommand | null {
   if (!token) return null;
   const normalized = token.toLowerCase().trim();
+
+  if (normalized === '最左' || normalized === 'zuizuo') return 'MAX_LEFT';
+  if (normalized === '最右' || normalized === 'zuiyou') return 'MAX_RIGHT';
 
   // Chinese & pinyin matches
   if (normalized === '向左' || normalized === '左' || normalized === 'zuo') return 'LEFT';
@@ -382,18 +425,127 @@ export function parseSingleToken(token: string): 'LEFT' | 'RIGHT' | 'FIRE' | nul
 }
 
 /**
- * Extract all voice action commands sequentially from transcript text.
+ * Extract all voice action commands sequentially from transcript text,
+ * expanding step multipliers (e.g. 'left two' -> ['LEFT', 'LEFT'])
+ * and handling boundary/extent phrases (e.g. 'all the way left' -> ['MAX_LEFT']).
  */
-export function extractVoiceCommands(text: string): ('LEFT' | 'RIGHT' | 'FIRE')[] {
+export function extractVoiceCommands(text: string): VoiceCommand[] {
   if (!text) return [];
-  const tokens = tokenizeTranscript(text);
-  const commands: ('LEFT' | 'RIGHT' | 'FIRE')[] = [];
 
-  for (const token of tokens) {
+  const norm = text.toLowerCase().trim();
+
+  // Check extent phrases
+  if (
+    norm.includes('all the way left') ||
+    norm.includes('far left') ||
+    norm.includes('max left') ||
+    norm.includes('最左') ||
+    norm.includes('zuizuo')
+  ) {
+    if (
+      norm === 'all the way left' ||
+      norm === 'far left' ||
+      norm === 'max left' ||
+      norm === '最左' ||
+      norm === 'zuizuo'
+    ) {
+      return ['MAX_LEFT'];
+    }
+  }
+
+  if (
+    norm.includes('all the way right') ||
+    norm.includes('far right') ||
+    norm.includes('max right') ||
+    norm.includes('最右') ||
+    norm.includes('zuiyou')
+  ) {
+    if (
+      norm === 'all the way right' ||
+      norm === 'far right' ||
+      norm === 'max right' ||
+      norm === '最右' ||
+      norm === 'zuiyou'
+    ) {
+      return ['MAX_RIGHT'];
+    }
+  }
+
+  const tokens = tokenizeTranscript(text);
+  const commands: VoiceCommand[] = [];
+
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+
+    // Check multi-word extent phrases matching exact token slices at index i
+    const fourPhrase = tokens.slice(i, i + 4).join(' ');
+    if (fourPhrase === 'all the way left') {
+      commands.push('MAX_LEFT');
+      i += 4;
+      continue;
+    }
+    if (fourPhrase === 'all the way right') {
+      commands.push('MAX_RIGHT');
+      i += 4;
+      continue;
+    }
+
+    const twoPhrase = tokens.slice(i, i + 2).join(' ');
+    if (twoPhrase === 'far left' || twoPhrase === 'max left') {
+      commands.push('MAX_LEFT');
+      i += 2;
+      continue;
+    }
+    if (twoPhrase === 'far right' || twoPhrase === 'max right') {
+      commands.push('MAX_RIGHT');
+      i += 2;
+      continue;
+    }
+
     const action = parseSingleToken(token);
+
+    if (action === 'MAX_LEFT' || action === 'MAX_RIGHT') {
+      commands.push(action);
+      i++;
+      continue;
+    }
+
+    if (action === 'LEFT' || action === 'RIGHT') {
+      // Lookahead for number following direction (e.g., 'left 2', 'left two', '向左两个', '左2')
+      let count = 1;
+      if (i + 1 < tokens.length) {
+        const nextNum = parseNumberWord(tokens[i + 1]);
+        if (nextNum !== null) {
+          count = nextNum;
+          i++; // consume number token
+        }
+      }
+
+      for (let c = 0; c < count; c++) {
+        commands.push(action);
+      }
+      i++;
+      continue;
+    }
+
+    // Check if token is a number preceding direction (e.g., 'two left', '2 right', '3 right', '两左')
+    const num = parseNumberWord(token);
+    if (num !== null && i + 1 < tokens.length) {
+      const nextAction = parseSingleToken(tokens[i + 1]);
+      if (nextAction === 'LEFT' || nextAction === 'RIGHT') {
+        for (let c = 0; c < num; c++) {
+          commands.push(nextAction);
+        }
+        i += 2; // consume both tokens
+        continue;
+      }
+    }
+
     if (action) {
       commands.push(action);
     }
+    i++;
   }
 
   return commands;
@@ -402,7 +554,7 @@ export function extractVoiceCommands(text: string): ('LEFT' | 'RIGHT' | 'FIRE')[
 /**
  * Parse verbal voice commands with phonetic fuzzy matching and homophones tolerance.
  */
-export function parseVoiceAction(text: string): 'LEFT' | 'RIGHT' | 'FIRE' | null {
+export function parseVoiceAction(text: string): VoiceCommand | null {
   if (!text) return null;
   const commands = extractVoiceCommands(text);
   return commands.length > 0 ? commands[commands.length - 1] : null;
@@ -421,6 +573,7 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
   const [aimIndex, setAimIndex] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [boundaryBounce, setBoundaryBounce] = useState<'LEFT' | 'RIGHT' | null>(null);
 
   const processedCommandCountRef = useRef<number>(0);
   const boardRef = useRef(board);
@@ -457,21 +610,49 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
     }
   }, [candidatePositions, aimIndex]);
 
+  const triggerBoundaryFeedback = useCallback((dir: 'LEFT' | 'RIGHT') => {
+    setBoundaryBounce(dir);
+    setFeedbackMsg(dir === 'LEFT' ? '⬅️ Leftmost Boundary Reached!' : '➡️ Rightmost Boundary Reached!');
+    setTimeout(() => {
+      setBoundaryBounce(null);
+      setFeedbackMsg(null);
+    }, 1000);
+  }, []);
+
   const handleAimLeft = useCallback(() => {
     setAimIndex((prev) => {
+      if (prev === 0) {
+        triggerBoundaryFeedback('LEFT');
+        return 0;
+      }
       const next = Math.max(0, prev - 1);
       aimIndexRef.current = next;
       return next;
     });
-  }, []);
+  }, [triggerBoundaryFeedback]);
 
   const handleAimRight = useCallback(() => {
     setAimIndex((prev) => {
       const maxIdx = Math.max(0, candidatePositionsRef.current.length - 1);
+      if (prev >= maxIdx) {
+        triggerBoundaryFeedback('RIGHT');
+        return maxIdx;
+      }
       const next = Math.min(maxIdx, prev + 1);
       aimIndexRef.current = next;
       return next;
     });
+  }, [triggerBoundaryFeedback]);
+
+  const handleAimMaxLeft = useCallback(() => {
+    setAimIndex(0);
+    aimIndexRef.current = 0;
+  }, []);
+
+  const handleAimMaxRight = useCallback(() => {
+    const maxIdx = Math.max(0, candidatePositionsRef.current.length - 1);
+    setAimIndex(maxIdx);
+    aimIndexRef.current = maxIdx;
   }, []);
 
   const handleShoot = useCallback(() => {
@@ -564,11 +745,13 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
         const action = commands[i];
         if (action === 'LEFT') handleAimLeft();
         else if (action === 'RIGHT') handleAimRight();
+        else if (action === 'MAX_LEFT') handleAimMaxLeft();
+        else if (action === 'MAX_RIGHT') handleAimMaxRight();
         else if (action === 'FIRE') handleShoot();
       }
       processedCommandCountRef.current = commands.length;
     }
-  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleShoot]);
+  }, [transcript, interimTranscript, handleAimLeft, handleAimRight, handleAimMaxLeft, handleAimMaxRight, handleShoot]);
 
   // Keyboard controls
   useEffect(() => {
@@ -640,7 +823,15 @@ export const BubbleShooterGame: React.FC<BubbleShooterGameProps> = ({
       </div>
 
       {/* Hex Grid Board Area & SVG Cannon Overlay */}
-      <div className="relative bg-slate-900 rounded-2xl p-4 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full max-w-[500px] pb-20">
+      <div
+        className={`relative bg-slate-900 rounded-2xl p-4 shadow-2xl border-4 border-indigo-500/30 overflow-hidden w-full max-w-[500px] pb-20 transition-transform ${
+          boundaryBounce === 'LEFT'
+            ? '-translate-x-3 duration-100 ease-in-out'
+            : boundaryBounce === 'RIGHT'
+            ? 'translate-x-3 duration-100 ease-in-out'
+            : ''
+        }`}
+      >
         {/* SVG Overlay for Laser Trajectory Line & Rotating Cannon */}
         <svg
           viewBox="0 0 500 480"

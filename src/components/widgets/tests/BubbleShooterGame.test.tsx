@@ -12,6 +12,7 @@ import {
   parseVoiceAction,
   parseSingleToken,
   tokenizeTranscript,
+  extractVoiceCommands,
   levenshteinDistance,
   type BubbleNode,
 } from '../BubbleShooterGame';
@@ -149,6 +150,50 @@ describe('BubbleShooterGame Helper Functions & Logic', () => {
 
     // Invalid input
     expect(parseVoiceAction('hello')).toBeNull();
+  });
+
+  it('triggers visual boundary bounce feedback when attempting to aim past leftmost/rightmost candidate', () => {
+    render(<BubbleShooterGame />);
+
+    const leftBtn = screen.getByRole('button', { name: /Aim Left/i });
+
+    // Initial aim is 0 (leftmost)
+    act(() => {
+      fireEvent.click(leftBtn);
+    });
+
+    // Should display boundary feedback message
+    expect(screen.getByText(/Leftmost Boundary Reached!/i)).toBeDefined();
+  });
+
+  it('parses multi-step voice commands with count numbers and Chinese equivalents', () => {
+    // English direction followed or preceded by number
+    expect(extractVoiceCommands('left two')).toEqual(['LEFT', 'LEFT']);
+    expect(extractVoiceCommands('left 2')).toEqual(['LEFT', 'LEFT']);
+    expect(extractVoiceCommands('right three')).toEqual(['RIGHT', 'RIGHT', 'RIGHT']);
+    expect(extractVoiceCommands('right 3')).toEqual(['RIGHT', 'RIGHT', 'RIGHT']);
+    expect(extractVoiceCommands('two left')).toEqual(['LEFT', 'LEFT']);
+    expect(extractVoiceCommands('3 right')).toEqual(['RIGHT', 'RIGHT', 'RIGHT']);
+
+    // Chinese count equivalents
+    expect(extractVoiceCommands('向左两个')).toEqual(['LEFT', 'LEFT']);
+    expect(extractVoiceCommands('左2')).toEqual(['LEFT', 'LEFT']);
+    expect(extractVoiceCommands('向右三个')).toEqual(['RIGHT', 'RIGHT', 'RIGHT']);
+    expect(extractVoiceCommands('右3')).toEqual(['RIGHT', 'RIGHT', 'RIGHT']);
+  });
+
+  it('parses extent keywords to MAX_LEFT and MAX_RIGHT', () => {
+    expect(extractVoiceCommands('all the way left')).toEqual(['MAX_LEFT']);
+    expect(extractVoiceCommands('far left')).toEqual(['MAX_LEFT']);
+    expect(extractVoiceCommands('max left')).toEqual(['MAX_LEFT']);
+    expect(extractVoiceCommands('最左')).toEqual(['MAX_LEFT']);
+    expect(extractVoiceCommands('zuizuo')).toEqual(['MAX_LEFT']);
+
+    expect(extractVoiceCommands('all the way right')).toEqual(['MAX_RIGHT']);
+    expect(extractVoiceCommands('far right')).toEqual(['MAX_RIGHT']);
+    expect(extractVoiceCommands('max right')).toEqual(['MAX_RIGHT']);
+    expect(extractVoiceCommands('最右')).toEqual(['MAX_RIGHT']);
+    expect(extractVoiceCommands('zuiyou')).toEqual(['MAX_RIGHT']);
   });
 });
 
