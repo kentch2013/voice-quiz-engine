@@ -41,10 +41,16 @@ export interface UseVoiceRecognitionOptions {
   onTranscriptChange?: (text: string) => void;
   noiseGateThreshold?: number; // RMS threshold (0.0 to 1.0)
   language?: VoiceLanguage;
+  autoFlushSilenceMs?: number; // Silence duration (ms) before auto-flushing transcript buffer (default: 1500)
 }
 
 export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
-  const { onTranscriptChange, noiseGateThreshold = 0.03, language = 'en-US' } = options;
+  const {
+    onTranscriptChange,
+    noiseGateThreshold = 0.03,
+    language = 'en-US',
+    autoFlushSilenceMs = 1500,
+  } = options;
 
   const onTranscriptChangeRef = useRef(onTranscriptChange);
 
@@ -63,11 +69,42 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const languageRef = useRef<VoiceLanguage>(language);
+  const autoFlushSilenceMsRef = useRef<number>(autoFlushSilenceMs);
 
   useEffect(() => {
     onTranscriptChangeRef.current = onTranscriptChange;
   }, [onTranscriptChange]);
+
+  useEffect(() => {
+    autoFlushSilenceMsRef.current = autoFlushSilenceMs;
+  }, [autoFlushSilenceMs]);
+
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const clearTranscript = useCallback(() => {
+    clearSilenceTimer();
+    setTranscript('');
+    setInterimTranscript('');
+    if (onTranscriptChangeRef.current) {
+      onTranscriptChangeRef.current('');
+    }
+  }, [clearSilenceTimer]);
+
+  const scheduleSilenceFlush = useCallback(() => {
+    clearSilenceTimer();
+    if (autoFlushSilenceMsRef.current > 0) {
+      silenceTimerRef.current = setTimeout(() => {
+        clearTranscript();
+      }, autoFlushSilenceMsRef.current);
+    }
+  }, [clearSilenceTimer, clearTranscript]);
 
   // Keep languageRef up-to-date
   useEffect(() => {
@@ -134,7 +171,12 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
         // Scale RMS to 0..100 range for display
         const levelPercent = Math.min(100, Math.round(rms * 200));
         setVolumeLevel(levelPercent);
-        setIsSpeechDetected(rms >= noiseGateThreshold);
+        const speechDetected = rms >= noiseGateThreshold;
+        setIsSpeechDetected(speechDetected);
+
+        if (speechDetected) {
+          clearSilenceTimer();
+        }
 
         animFrameRef.current = requestAnimationFrame(analyze);
       };
@@ -187,6 +229,10 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
       setInterimTranscript(trimmedInterim);
       if (trimmedInterim && onTranscriptChangeRef.current) {
         onTranscriptChangeRef.current(trimmedInterim);
+      }
+
+      if (trimmedFinal || trimmedInterim) {
+        scheduleSilenceFlush();
       }
     };
 
@@ -287,6 +333,7 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
 
   // Reset transcript
   const resetTranscript = useCallback(() => {
+    clearSilenceTimer();
     setTranscript('');
     setInterimTranscript('');
     if (recognitionRef.current && shouldListenRef.current) {
@@ -296,12 +343,13 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
         // Ignore
       }
     }
-  }, []);
+  }, [clearSilenceTimer]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       shouldListenRef.current = false;
+      clearSilenceTimer();
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current);
       }
@@ -314,7 +362,7 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
       }
       stopAudioAnalysis();
     };
-  }, [stopAudioAnalysis]);
+  }, [stopAudioAnalysis, clearSilenceTimer]);
 
   return {
     transcript,
@@ -327,5 +375,6 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
     startListening,
     stopListening,
     resetTranscript,
+    clearTranscript,
   };
 }

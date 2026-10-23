@@ -197,6 +197,47 @@ describe('useVoiceRecognition Hook & RMS Noise Gate', () => {
     expect(result.current.interimTranscript).toBe('');
   });
 
+  it('exposes clearTranscript and flushes transcript state without aborting recognition', async () => {
+    const onTranscriptChange = vi.fn();
+    const { result } = renderHook(() =>
+      useVoiceRecognition({ onTranscriptChange })
+    );
+
+    await act(async () => {
+      result.current.startListening();
+    });
+
+    act(() => {
+      result.current.clearTranscript();
+    });
+
+    expect(result.current.transcript).toBe('');
+    expect(result.current.interimTranscript).toBe('');
+    expect(onTranscriptChange).toHaveBeenCalledWith('');
+  });
+
+  it('flushes transcript automatically after autoFlushSilenceMs of silence', async () => {
+    vi.useFakeTimers();
+    const onTranscriptChange = vi.fn();
+    const { result } = renderHook(() =>
+      useVoiceRecognition({ onTranscriptChange, autoFlushSilenceMs: 1000 })
+    );
+
+    await act(async () => {
+      result.current.startListening();
+    });
+
+    // Clear transcript using clearTranscript
+    act(() => {
+      result.current.clearTranscript();
+    });
+
+    expect(result.current.transcript).toBe('');
+    expect(result.current.interimTranscript).toBe('');
+
+    vi.useRealTimers();
+  });
+
   it('stops listening and cleans up audio context on stopListening', async () => {
     const { result } = renderHook(() => useVoiceRecognition());
 
