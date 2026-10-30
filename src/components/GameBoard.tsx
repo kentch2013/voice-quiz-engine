@@ -16,7 +16,7 @@ import { SvgSpatialScene } from './widgets/SvgSpatialScene';
 import { NumberSnakeGame } from './widgets/NumberSnakeGame';
 import { LetterHeroGame } from './widgets/LetterHeroGame';
 import { PlinkoBonusGame } from './widgets/PlinkoBonusGame';
-import { BubbleShooterGame } from './widgets/BubbleShooterGame';
+import { WidgetRenderer } from './widgets/WidgetRenderer';
 
 interface GameBoardProps {
   item: QuizItem;
@@ -68,161 +68,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const currentDisplayedTranscript = interimTranscript || transcript;
 
   const renderWidget = () => {
-    if (isPlinkoActive) {
-      return (
-        <PlinkoBonusGame
-          {...(item.widget?.plinkoProps || {})}
-          transcript={transcript}
-          interimTranscript={interimTranscript}
-          onComplete={onPlinkoComplete}
-        />
-      );
-    }
-
-    if (!item.widget || item.widget.type === 'none') {
-      return null;
-    }
-
-    switch (item.widget.type) {
-      case 'shape':
-        return item.widget.shapeProps ? (
-          <SvgShape {...item.widget.shapeProps} />
-        ) : null;
-
-      case 'clock':
-        return item.widget.clockProps ? (
-          <SvgClock {...item.widget.clockProps} />
-        ) : null;
-
-      case 'dotgrid':
-        return item.widget.dotGridProps ? (
-          <SvgDotGrid {...item.widget.dotGridProps} />
-        ) : null;
-
-      case 'flashcard':
-        return item.widget.flashcardProps ? (
-          <FlashcardWidget {...item.widget.flashcardProps} />
-        ) : null;
-
-      case 'choice':
-        return item.widget.choiceProps ? (
-          <ChoiceGrid
-            {...item.widget.choiceProps}
-            onSelectOption={onOptionSelect}
-          />
-        ) : null;
-
-      case 'tenframe':
-        return item.widget.tenFrameProps ? (
-          <SvgTenFrame {...item.widget.tenFrameProps} />
-        ) : null;
-
-      case 'placevalue':
-        return item.widget.placeValueProps ? (
-          <SvgPlaceValueBlocks {...item.widget.placeValueProps} />
-        ) : null;
-
-      case 'coin':
-        return item.widget.coinProps ? (
-          <SvgCoin
-            {...item.widget.coinProps}
-            questionIndex={questionIndex}
-            showExpiredAnswer={showExpiredAnswer}
-          />
-        ) : null;
-
-      case 'equation':
-        return item.widget.equationProps ? (
-          <SvgEquationCard {...item.widget.equationProps} />
-        ) : null;
-
-      case 'spatialscene':
-        return item.widget.spatialSceneProps ? (
-          <SvgSpatialScene {...item.widget.spatialSceneProps} />
-        ) : null;
-
-      case 'numbersnake':
-        return (
-          <NumberSnakeGame
-            key={item.id}
-            {...item.widget.numberSnakeProps}
-            transcript={transcript}
-            interimTranscript={interimTranscript}
-            onEatTarget={onEatTarget}
-            onComplete={() => {
-              onSnakeComplete?.();
-              onOptionSelect?.({
-                id: 'completed',
-                label: 'completed',
-                value: 'completed',
-              });
-            }}
-          />
-        );
-
-      case 'letterhero':
-        return (
-          <LetterHeroGame
-            key={item.id}
-            {...item.widget.letterHeroProps}
-            transcript={transcript}
-            interimTranscript={interimTranscript}
-            onComplete={() => {
-              onSnakeComplete?.();
-              onOptionSelect?.({
-                id: 'completed',
-                label: 'completed',
-                value: 'completed',
-              });
-            }}
-          />
-        );
-
-      case 'plinko':
-        return (
-          <PlinkoBonusGame
-            {...item.widget.plinkoProps}
-            transcript={transcript}
-            interimTranscript={interimTranscript}
-            onComplete={onPlinkoComplete}
-          />
-        );
-
-      case 'bubbleshooter':
-        return (
-          <BubbleShooterGame
-            key={item.widget?.type || 'bubbleshooter'}
-            {...item.widget.bubbleShooterProps}
-            transcript={transcript}
-            interimTranscript={interimTranscript}
-            clearTranscript={clearTranscript}
-            resetTranscript={resetTranscript}
-            onTripleMatched={() => {
-              // Advance twice on question progress bar per matched triple
-              onEatTarget?.(0, 0);
-              onEatTarget?.(0, 0);
-            }}
-            onComplete={() => {
-              onSnakeComplete?.();
-              onOptionSelect?.({
-                id: 'completed',
-                label: 'completed',
-                value: 'completed',
-              });
-            }}
-          />
-        );
-
-      default:
-        return null;
-    }
+    return (
+      <WidgetRenderer
+        item={item}
+        transcript={transcript}
+        interimTranscript={interimTranscript}
+        showExpiredAnswer={showExpiredAnswer}
+        isPlinkoActive={isPlinkoActive}
+        questionIndex={questionIndex}
+        onOptionSelect={onOptionSelect}
+        onEatTarget={onEatTarget}
+        onSnakeComplete={onSnakeComplete}
+        onPlinkoComplete={onPlinkoComplete}
+        clearTranscript={clearTranscript}
+        resetTranscript={resetTranscript}
+      />
+    );
   };
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
       {/* Timer and Status Bar */}
       <div className="w-full flex justify-between items-center bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200 gap-2 flex-wrap sm:flex-nowrap">
-        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && item.widget?.type !== 'bubbleshooter' && !isPlinkoActive ? (
+        {item.widget?.type !== 'numbersnake' && item.widget?.type !== 'letterhero' && item.widget?.type !== 'plinko' && item.widget?.type !== 'bubbleshooter' && item.widget?.type !== 'whackamole' && !isPlinkoActive ? (
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center justify-center p-2 rounded-xl ${
