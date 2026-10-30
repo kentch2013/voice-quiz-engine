@@ -127,8 +127,14 @@ export function useGameEngine() {
   // Auto read prompt when item changes and TTS read-aloud is enabled
   useEffect(() => {
     if (status === 'playing' && currentItem && readAloudEnabled) {
-      // Suppress reading subsequent or repeated instructions/prompts after eating first food in Number Snake or advancing in Bubble Shooter
-      if ((currentItem.widget?.type === 'numbersnake' || currentItem.widget?.type === 'bubbleshooter') && currentIndex > 0) return;
+      // Suppress reading subsequent or repeated instructions/prompts after eating first food in Number Snake or advancing in Bubble Shooter / Whack-A-Mole
+      if (
+        (currentItem.widget?.type === 'numbersnake' ||
+          currentItem.widget?.type === 'bubbleshooter' ||
+          currentItem.widget?.type === 'whackamole') &&
+        currentIndex > 0
+      )
+        return;
       const textToRead = getTTSPrompt(currentItem, language, currentIndex);
       tts.speak(textToRead);
     }
@@ -400,7 +406,8 @@ export function useGameEngine() {
     if (
       currentItem?.widget?.type === 'numbersnake' ||
       currentItem?.widget?.type === 'letterhero' ||
-      currentItem?.widget?.type === 'bubbleshooter'
+      currentItem?.widget?.type === 'bubbleshooter' ||
+      currentItem?.widget?.type === 'whackamole'
     ) return;
 
     const timer = setInterval(() => {

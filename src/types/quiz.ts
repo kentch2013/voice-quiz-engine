@@ -18,6 +18,7 @@ export type WidgetType =
   | 'letterhero'
   | 'plinko'
   | 'bubbleshooter'
+  | 'whackamole'
   | 'none';
 
 export interface QuizOption {
@@ -144,6 +145,23 @@ export interface BubbleShooterProps {
   onTripleMatched?: () => void;
 }
 
+export interface WhackAMoleOption {
+  id: string;
+  word: string;
+  isTarget: boolean;
+  emoji?: string;
+}
+
+export interface WhackAMoleProps {
+  prompt?: string;
+  targetHits?: number;
+  timeLimit?: number;
+  options?: WhackAMoleOption[] | QuizOption[];
+  targetWord?: string;
+  targetCategory?: string;
+  onComplete?: () => void;
+}
+
 export interface WidgetConfig {
   type: WidgetType;
   shapeProps?: ShapeProps;
@@ -161,6 +179,8 @@ export interface WidgetConfig {
   letterHeroProps?: LetterHeroProps;
   plinkoProps?: PlinkoProps;
   bubbleShooterProps?: BubbleShooterProps;
+  whackAMoleProps?: WhackAMoleProps;
+  whackamoleProps?: WhackAMoleProps;
 }
 
 export interface KeypadConfig {
