@@ -1,47 +1,63 @@
 import type { QuizModule } from '../types';
-import type { GradeBand, QuizItem } from '../../types/quiz';
+import type { GradeBand, QuizItem, WhackAMoleOption } from '../../types/quiz';
 import { getLetterAcceptableAnswers } from './letterIdentification';
 
-export function generateBeginningLetterSoundsItems(gradeBand: GradeBand = 'K-1', count: number = 10): QuizItem[] {
-  const soundPool = [
-    { word: 'Duck', emoji: '🦆', letter: 'D' },
-    { word: 'Apple', emoji: '🍎', letter: 'A' },
-    { word: 'Cat', emoji: '🐱', letter: 'C' },
-    { word: 'Bear', emoji: '🐻', letter: 'B' },
-    { word: 'Fish', emoji: '🐟', letter: 'F' },
-    { word: 'Lion', emoji: '🦁', letter: 'L' },
-    { word: 'Monkey', emoji: '🐒', letter: 'M' },
-    { word: 'Sun', emoji: '☀️', letter: 'S' },
-    { word: 'Tiger', emoji: '🐯', letter: 'T' },
-    { word: 'Zebra', emoji: '🦓', letter: 'Z' },
-    { word: 'Pig', emoji: '🐷', letter: 'P' },
-    { word: 'Snake', emoji: '🐍', letter: 'S' },
-  ];
+export const BEGINNING_SOUNDS_POOL = [
+  { word: 'Duck', emoji: '🦆', letter: 'D' },
+  { word: 'Apple', emoji: '🍎', letter: 'A' },
+  { word: 'Cat', emoji: '🐱', letter: 'C' },
+  { word: 'Bear', emoji: '🐻', letter: 'B' },
+  { word: 'Fish', emoji: '🐟', letter: 'F' },
+  { word: 'Lion', emoji: '🦁', letter: 'L' },
+  { word: 'Monkey', emoji: '🐒', letter: 'M' },
+  { word: 'Sun', emoji: '☀️', letter: 'S' },
+  { word: 'Tiger', emoji: '🐯', letter: 'T' },
+  { word: 'Zebra', emoji: '🦓', letter: 'Z' },
+  { word: 'Pig', emoji: '🐷', letter: 'P' },
+  { word: 'Snake', emoji: '🐍', letter: 'S' },
+];
 
+export function generateBeginningLetterSoundsItems(gradeBand: GradeBand = 'K-1', count: number = 10): QuizItem[] {
   const items: QuizItem[] = [];
 
   for (let i = 0; i < count; i++) {
-    const entry = soundPool[i % soundPool.length];
+    const entry = BEGINNING_SOUNDS_POOL[i % BEGINNING_SOUNDS_POOL.length];
+    const prompt = `Whack words starting with: ${entry.letter} ${entry.emoji}`;
+    const ttsPrompt = `Whack words starting with: ${entry.letter}`;
+    const ttsPromptZh = `打掉以字母 ${entry.letter} 开头的单词！`;
+
+    const options: WhackAMoleOption[] = BEGINNING_SOUNDS_POOL.map((item, idx) => ({
+      id: `sound-opt-${idx}-${item.word.toLowerCase()}`,
+      word: item.word,
+      emoji: item.emoji,
+      isTarget: item.letter.toUpperCase() === entry.letter.toUpperCase(),
+    }));
+
+    const moleProps = {
+      prompt,
+      targetHits: 10,
+      timeLimit: 45,
+      options,
+    };
 
     items.push({
       id: `bg-sound-${i}-${Date.now()}`,
       topicId: 'beginning-letter-sounds',
       gradeBand,
-      prompt: `What letter does ${entry.word} start with?`,
-      ttsPrompt: `What letter does ${entry.word} start with?`,
-      ttsPromptZh: `${entry.word} 以什么字母开头?`,
-      expectedAnswer: entry.letter,
-      acceptableAnswers: getLetterAcceptableAnswers(entry.letter),
+      prompt,
+      ttsPrompt,
+      ttsPromptConcise: `Words starting with ${entry.letter}`,
+      ttsPromptZh,
+      ttsPromptZhConcise: `以 ${entry.letter} 开头的单词`,
+      expectedAnswer: 'completed',
+      acceptableAnswers: ['completed', 'done', 'win', '10', entry.letter, ...getLetterAcceptableAnswers(entry.letter)],
       widget: {
-        type: 'flashcard',
-        flashcardProps: {
-          text: `${entry.emoji} ${entry.word}`,
-          category: 'phonics',
-          fontSize: '64px',
-        },
+        type: 'whackamole',
+        whackamoleProps: moleProps,
+        whackAMoleProps: moleProps,
       },
       keypad: {
-        type: 'alphabet',
+        type: 'none',
       },
     });
   }
@@ -53,7 +69,7 @@ export const beginningLetterSoundsModule: QuizModule = {
   topic: {
     id: 'beginning-letter-sounds',
     title: '🗣️ Beginning Letter Sounds',
-    description: 'Identify the initial letter sound for pictured words.',
+    description: 'Whack the moles with words matching the initial letter sound!',
     icon: '🗣️',
     gradeBands: ['K-1', '2-3'],
   },

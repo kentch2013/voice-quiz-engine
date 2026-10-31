@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateQuizItems, getTTSPrompt, TOPICS } from '../quizGenerator';
+import { generateQuizItems, TOPICS } from '../quizGenerator';
 
 describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', () => {
   it('registers all 5 Batch 2 language arts topics in TOPICS array', () => {
@@ -29,43 +29,61 @@ describe('Batch 2: Phonics, Reading & Language Arts Modules Quiz Generators', ()
   });
 
   describe('sight-words generator', () => {
-    it('generates sight word items with non-spoiling TTS prompts', () => {
+    it('generates sight word items with whackamole widget and whackamoleProps', () => {
       const items = generateQuizItems('sight-words', 'K-1', 4);
       expect(items).toHaveLength(4);
 
-      items.forEach((item, index) => {
+      items.forEach((item) => {
         expect(item.topicId).toBe('sight-words');
-        expect(item.widget?.type).toBe('flashcard');
-        expect(item.keypad?.type).toBe('alphabet');
+        expect(item.widget?.type).toBe('whackamole');
+        expect(item.keypad?.type).toBe('none');
 
-        const word = (item.expectedAnswer as string).toLowerCase();
-        expect(item.ttsPrompt).not.toContain(word);
+        const moleProps = item.widget?.whackamoleProps || item.widget?.whackAMoleProps;
+        expect(moleProps).toBeDefined();
+        expect(moleProps?.prompt).toMatch(/^Whack the word: [A-Z]+$/);
+        expect(moleProps?.targetHits).toBe(10);
+        expect(moleProps?.timeLimit).toBe(45);
+        expect(moleProps?.options).toBeDefined();
+        expect(moleProps?.options?.length).toBeGreaterThan(0);
 
-        expect(getTTSPrompt(item, 'en-US', 0)).toBe('Read this word out loud');
-        if (index > 0) {
-          expect(getTTSPrompt(item, 'en-US', index)).toBe('');
-        }
+        const targetOptions = moleProps?.options?.filter((o) => 'isTarget' in o && o.isTarget);
+        expect(targetOptions?.length).toBe(1);
+
+        const distractorOptions = moleProps?.options?.filter((o) => 'isTarget' in o && !o.isTarget);
+        expect(distractorOptions?.length).toBeGreaterThan(0);
+
+        expect(item.expectedAnswer).toBe('completed');
+        expect(item.acceptableAnswers).toContain('completed');
       });
     });
   });
 
   describe('beginning-letter-sounds generator', () => {
-    it('generates valid beginning letter sound items with prompts, flashcards, and alphabet keypads', () => {
+    it('generates valid beginning letter sound items with whackamole widget and whackamoleProps', () => {
       const items = generateQuizItems('beginning-letter-sounds', 'K-1', 6);
       expect(items).toHaveLength(6);
 
       items.forEach((item) => {
         expect(item.topicId).toBe('beginning-letter-sounds');
-        expect(item.widget?.type).toBe('flashcard');
-        expect(item.keypad?.type).toBe('alphabet');
-        expect(item.prompt).toMatch(/What letter does .* start with\?/i);
-        expect(typeof item.expectedAnswer).toBe('string');
-        expect(item.expectedAnswer).toHaveLength(1);
+        expect(item.widget?.type).toBe('whackamole');
+        expect(item.keypad?.type).toBe('none');
 
-        const expectedLetter = (item.expectedAnswer as string).toLowerCase();
-        const acceptableLower = item.acceptableAnswers!.map((a) => a.toString().toLowerCase());
-        expect(acceptableLower).toContain(expectedLetter);
-        expect(item.widget?.flashcardProps?.category).toBe('phonics');
+        const moleProps = item.widget?.whackamoleProps || item.widget?.whackAMoleProps;
+        expect(moleProps).toBeDefined();
+        expect(moleProps?.prompt).toMatch(/^Whack words starting with: [A-Z]/);
+        expect(moleProps?.targetHits).toBe(10);
+        expect(moleProps?.timeLimit).toBe(45);
+        expect(moleProps?.options).toBeDefined();
+        expect(moleProps?.options?.length).toBeGreaterThan(0);
+
+        const targetOptions = moleProps?.options?.filter((o) => 'isTarget' in o && o.isTarget);
+        expect(targetOptions?.length).toBeGreaterThanOrEqual(1);
+
+        const distractorOptions = moleProps?.options?.filter((o) => 'isTarget' in o && !o.isTarget);
+        expect(distractorOptions?.length).toBeGreaterThan(0);
+
+        expect(item.expectedAnswer).toBe('completed');
+        expect(item.acceptableAnswers).toContain('completed');
       });
     });
   });
