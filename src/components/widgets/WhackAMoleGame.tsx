@@ -138,10 +138,50 @@ function normalizeOptions(
   });
 }
 
+/**
+ * Helper to assign initial options to all 9 holes from the pool.
+ */
+function createInitialHoles(pool: WhackAMoleOption[]): MoleState[] {
+  const initialHoles: MoleState[] = [];
+  const targets = pool.filter((o) => o.isTarget);
+  const distractors = pool.filter((o) => !o.isTarget);
+
+  // Guarantee at least some targets among the 9 holes if available
+  const chosenOptions: WhackAMoleOption[] = [];
+  const targetQueue = [...targets];
+  const distractorQueue = [...distractors];
+
+  for (let i = 0; i < 9; i++) {
+    let chosen: WhackAMoleOption;
+    // Aim to provide a balance of targets and distractors
+    if (i < 3 && targetQueue.length > 0) {
+      chosen = targetQueue.shift()!;
+    } else if (distractorQueue.length > 0) {
+      chosen = distractorQueue.shift()!;
+    } else if (targetQueue.length > 0) {
+      chosen = targetQueue.shift()!;
+    } else {
+      chosen = pool[i % pool.length];
+    }
+    chosenOptions.push(chosen);
+  }
+
+  // Shuffle assigned positions slightly or keep deterministic
+  for (let idx = 0; idx < 9; idx++) {
+    initialHoles.push({
+      id: idx,
+      status: 'DOWN',
+      option: chosenOptions[idx] || pool[idx % pool.length],
+    });
+  }
+
+  return initialHoles;
+}
+
 export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
   prompt = 'Whack words starting with: B 🐻',
   targetHits = 10,
-  timeLimit = 45,
+  timeLimit = 75,
   options: rawOptions,
   targetWord,
   transcript = '',
@@ -155,11 +195,7 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
   );
 
   const [moles, setMoles] = useState<MoleState[]>(() =>
-    Array.from({ length: 9 }, (_, idx) => ({
-      id: idx,
-      status: 'DOWN',
-      option: null,
-    }))
+    createInitialHoles(normalizedOptions)
   );
 
   const [hitsScore, setHitsScore] = useState<number>(0);
@@ -168,7 +204,7 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [warningMsg, setWarningMsg] = useState<string | null>(null);
 
-  const moleTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  const moleTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const processedCommandCountRef = useRef<number>(0);
 
   const molesRef = useRef(moles);
@@ -211,14 +247,8 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
     setWarningMsg(null);
     processedCommandCountRef.current = 0;
 
-    setMoles(
-      Array.from({ length: 9 }, (_, idx) => ({
-        id: idx,
-        status: 'DOWN',
-        option: null,
-      }))
-    );
-  }, [timeLimit]);
+    setMoles(createInitialHoles(normalizedOptions));
+  }, [timeLimit, normalizedOptions]);
 
   // Overall Game Countdown Timer
   useEffect(() => {
@@ -251,7 +281,7 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
     const retractTimer = setTimeout(() => {
       setMoles((prev) =>
         prev.map((m) =>
-          m.id === holeIdx ? { ...m, status: 'DOWN', option: null } : m
+          m.id === holeIdx ? { ...m, status: 'DOWN' } : m
         )
       );
       moleTimersRef.current.delete(holeIdx);
@@ -259,6 +289,37 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
 
     moleTimersRef.current.set(holeIdx, retractTimer);
   }, [clearHoleTimer]);
+
+  // Choose replacement word for a hole upon correct hit
+  const getReplacementOption = useCallback(
+    (holeIdx: number, currentOptionId: string): WhackAMoleOption => {
+      const currentMoles = molesRef.current;
+      // Find options currently assigned to other holes
+      const assignedOptionIds = new Set(
+        currentMoles
+          .filter((m) => m.id !== holeIdx && m.option)
+          .map((m) => m.option!.id)
+      );
+
+      // Prefer options from normalizedOptions not currently shown on other holes
+      const unassignedPool = normalizedOptions.filter(
+        (opt) => !assignedOptionIds.has(opt.id) && opt.id !== currentOptionId
+      );
+
+      if (unassignedPool.length > 0) {
+        return unassignedPool[Math.floor(Math.random() * unassignedPool.length)];
+      }
+
+      // If all options in pool are in use or pool is smaller than 9, pick any option different from current
+      const differentPool = normalizedOptions.filter((opt) => opt.id !== currentOptionId);
+      if (differentPool.length > 0) {
+        return differentPool[Math.floor(Math.random() * differentPool.length)];
+      }
+
+      return normalizedOptions[0];
+    },
+    [normalizedOptions]
+  );
 
   // Handle whacking a mole (click or voice)
   const handleWhackMole = useCallback(
@@ -277,7 +338,10 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
       if (isTarget) {
         playCorrectChime();
 
-        // Set to 'HIT' state for squish effect
+        // Calculate replacement word upon correct hit
+        const newOption = getReplacementOption(holeIdx, currentMole.option.id);
+
+        // Set to 'HIT' state for squish effect (cleanly isolated HIT state transition)
         setMoles((prev) =>
           prev.map((m) =>
             m.id === holeIdx ? { ...m, status: 'HIT' } : m
@@ -303,10 +367,11 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
           return nextScore;
         });
 
+        // Dedicated hit timer before returning to DOWN state with replaced word
         const hitTimer = setTimeout(() => {
           setMoles((prev) =>
             prev.map((m) =>
-              m.id === holeIdx ? { ...m, status: 'DOWN', option: null } : m
+              m.id === holeIdx ? { ...m, status: 'DOWN', option: newOption } : m
             )
           );
           moleTimersRef.current.delete(holeIdx);
@@ -321,7 +386,7 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
         retractMole(holeIdx);
       }
     },
-    [clearHoleTimer, targetHits, retractMole]
+    [clearHoleTimer, targetHits, retractMole, getReplacementOption]
   );
 
   // Mole Pop Up Spawner Loop
@@ -337,34 +402,28 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
         const availableDownHoles = currentMoles.filter((m) => m.status === 'DOWN');
 
         if (availableDownHoles.length > 0) {
-          const randomHole =
-            availableDownHoles[Math.floor(Math.random() * availableDownHoles.length)];
-
-          // Ensure options are selected with a healthy mix of target and distractors
-          const targets = normalizedOptions.filter((o) => o.isTarget);
-          const distractors = normalizedOptions.filter((o) => !o.isTarget);
-
+          // If none of the active UP moles is a target, prefer a down hole with a target option if available
           const hasTargetUp = activeUpMoles.some((m) => m.option?.isTarget);
-          let chosenOption: WhackAMoleOption;
+          const downHolesWithTarget = availableDownHoles.filter((m) => m.option?.isTarget);
 
-          if (!hasTargetUp && targets.length > 0) {
-            chosenOption = targets[Math.floor(Math.random() * targets.length)];
+          let randomHole: MoleState;
+          if (!hasTargetUp && downHolesWithTarget.length > 0) {
+            randomHole = downHolesWithTarget[Math.floor(Math.random() * downHolesWithTarget.length)];
           } else {
-            const pool = normalizedOptions;
-            chosenOption = pool[Math.floor(Math.random() * pool.length)];
+            randomHole = availableDownHoles[Math.floor(Math.random() * availableDownHoles.length)];
           }
 
-          // Pop UP mole
+          // Pop UP mole (keeping its persistent assigned option)
           setMoles((prev) =>
             prev.map((m) =>
               m.id === randomHole.id
-                ? { ...m, status: 'UP', option: chosenOption }
+                ? { ...m, status: 'UP' }
                 : m
             )
           );
 
-          // Staggered popup duration (1.5s - 2.5s)
-          const duration = 1500 + Math.random() * 1000;
+          // Kid-friendly emergent reader pacing popup duration: 4.5s – 6.0s
+          const duration = 4500 + Math.random() * 1500;
 
           const popupTimer = setTimeout(() => {
             retractMole(randomHole.id);
@@ -376,7 +435,7 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
     }, 700);
 
     return () => clearInterval(spawnerInterval);
-  }, [isWon, isGameOver, normalizedOptions, retractMole]);
+  }, [isWon, isGameOver, retractMole]);
 
   // Clean up timers on unmount
   useEffect(() => {
@@ -461,58 +520,81 @@ export const WhackAMoleGame: React.FC<WhackAMoleGameProps> = ({
               <div
                 key={mole.id}
                 data-testid={`mole-hole-${mole.id}`}
-                className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center"
+                className="relative w-24 h-28 sm:w-28 sm:h-32 flex flex-col items-center justify-start pt-1"
               >
-                {/* Hole Ground & Rim Background SVG */}
-                <svg
-                  viewBox="0 0 100 100"
-                  className="absolute inset-0 w-full h-full pointer-events-none z-0"
-                >
-                  {/* Dirt Hole Shadow */}
-                  <ellipse cx="50" cy="70" rx="42" ry="22" fill="#2d1810" />
-                  {/* Outer Rim */}
-                  <ellipse cx="50" cy="68" rx="42" ry="20" fill="#4a2810" stroke="#1f0e08" strokeWidth="4" />
-                  {/* Inner Hole Pit */}
-                  <ellipse cx="50" cy="68" rx="36" ry="15" fill="#170a04" />
-                </svg>
+                {/* Mole Hole Visual Container */}
+                <div className="relative w-24 h-20 sm:w-28 sm:h-24 flex items-center justify-center">
+                  {/* Hole Ground & Rim Background SVG */}
+                  <svg
+                    viewBox="0 0 100 100"
+                    className="absolute inset-0 w-full h-full pointer-events-none z-0"
+                  >
+                    {/* Dirt Hole Shadow */}
+                    <ellipse cx="50" cy="70" rx="42" ry="22" fill="#2d1810" />
+                    {/* Outer Rim */}
+                    <ellipse cx="50" cy="68" rx="42" ry="20" fill="#4a2810" stroke="#1f0e08" strokeWidth="4" />
+                    {/* Inner Hole Pit */}
+                    <ellipse cx="50" cy="68" rx="36" ry="15" fill="#170a04" />
+                  </svg>
 
-                {/* Mole Pop Up Interactive Button */}
-                <button
-                  type="button"
-                  data-testid={`mole-btn-${mole.id}`}
-                  data-status={mole.status}
-                  onClick={() => handleWhackMole(mole.id)}
-                  disabled={!isUp}
-                  className={`absolute z-10 w-20 sm:w-24 h-20 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all duration-200 cursor-pointer select-none ${
-                    isHit
-                      ? 'scale-110 bg-amber-400 text-amber-950 border-4 border-yellow-300 shadow-2xl animate-ping'
-                      : isUp
-                      ? 'top-0 scale-100 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 text-amber-950 shadow-xl border-4 border-amber-200 active:scale-95'
-                      : isRetracting
-                      ? 'top-4 scale-75 opacity-60 bg-amber-600 text-amber-950'
-                      : 'top-10 scale-0 opacity-0 pointer-events-none'
-                  }`}
-                  style={{
-                    top: isUp ? '2px' : isRetracting ? '24px' : '45px',
-                  }}
-                >
-                  {isHit ? (
-                    <div className="font-black text-lg sm:text-xl text-rose-800 animate-bounce">
-                      💥 HIT!
-                    </div>
-                  ) : isUp && mole.option ? (
-                    <>
-                      {/* Mole Cute Face Header */}
-                      <span className="text-xl sm:text-2xl leading-none">
-                        {mole.option.emoji || '🐹'}
-                      </span>
-                      {/* Word Banner Label */}
-                      <span className="text-xs sm:text-sm font-extrabold text-amber-950 tracking-tight max-w-[90%] truncate px-1 mt-0.5 bg-amber-100/90 rounded-md border border-amber-400">
-                        {mole.option.word}
-                      </span>
-                    </>
-                  ) : null}
-                </button>
+                  {/* Mole Pop Up Interactive Button */}
+                  <button
+                    type="button"
+                    data-testid={`mole-btn-${mole.id}`}
+                    data-status={mole.status}
+                    onClick={() => handleWhackMole(mole.id)}
+                    disabled={!isUp}
+                    className={`absolute z-10 w-20 sm:w-24 h-20 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all duration-200 cursor-pointer select-none ${
+                      isHit
+                        ? 'scale-110 bg-amber-400 text-amber-950 border-4 border-yellow-300 shadow-2xl animate-ping'
+                        : isUp
+                        ? 'top-0 scale-100 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 text-amber-950 shadow-xl border-4 border-amber-200 active:scale-95'
+                        : isRetracting
+                        ? 'top-4 scale-75 opacity-60 bg-amber-600 text-amber-950'
+                        : 'top-10 scale-0 opacity-0 pointer-events-none'
+                    }`}
+                    style={{
+                      top: isUp ? '2px' : isRetracting ? '24px' : '45px',
+                    }}
+                  >
+                    {isHit ? (
+                      <div className="font-black text-lg sm:text-xl text-rose-800 animate-bounce">
+                        💥 HIT!
+                      </div>
+                    ) : isUp && mole.option ? (
+                      <>
+                        {/* Mole Cute Face Header */}
+                        <span className="text-xl sm:text-2xl leading-none">
+                          {mole.option.emoji || '🐹'}
+                        </span>
+                        {/* Word Banner Label inside mole */}
+                        <span className="text-xs sm:text-sm font-extrabold text-amber-950 tracking-tight max-w-[90%] truncate px-1 mt-0.5 bg-amber-100/90 rounded-md border border-amber-400">
+                          {mole.option.word}
+                        </span>
+                      </>
+                    ) : null}
+                  </button>
+                </div>
+
+                {/* Persistent Hole Word Display & Lighting State */}
+                {mole.option && (
+                  <button
+                    type="button"
+                    data-testid={`hole-word-${mole.id}`}
+                    data-status={mole.status}
+                    onClick={() => handleWhackMole(mole.id)}
+                    disabled={!isUp}
+                    className={`relative z-20 mt-1 max-w-[95%] truncate text-center text-xs sm:text-sm transition-all duration-300 select-none ${
+                      isUp
+                        ? 'opacity-100 text-amber-500 font-extrabold ring-2 ring-amber-300 bg-amber-950/90 shadow-lg px-2.5 py-0.5 rounded-full cursor-pointer transform scale-105 animate-pulse'
+                        : isHit
+                        ? 'opacity-100 text-emerald-400 font-extrabold ring-2 ring-emerald-300 bg-emerald-950/90 shadow-lg px-2.5 py-0.5 rounded-full'
+                        : 'opacity-40 text-slate-400 font-medium px-2 py-0.5 bg-black/30 rounded-full cursor-not-allowed'
+                    }`}
+                  >
+                    {mole.option.word}
+                  </button>
+                )}
               </div>
             );
           })}

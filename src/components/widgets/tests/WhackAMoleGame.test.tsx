@@ -4,7 +4,6 @@ import {
   WhackAMoleGame,
   levenshteinDistance,
   isWordSpoken,
-  DEFAULT_WHACK_OPTIONS,
 } from '../WhackAMoleGame';
 import { playCorrectChime, playWrongSound } from '../../../utils/audioSynthesizer';
 
@@ -48,31 +47,55 @@ describe('WhackAMoleGame Component & Utility Functions', () => {
   });
 
   describe('Component Behavior & State Rules', () => {
-    it('renders initial 3x3 mole grid with 9 holes and header banner', () => {
+    it('renders initial 3x3 mole grid with 9 holes, child pacing timer, and persistent word on each hole', () => {
       render(<WhackAMoleGame prompt="Whack words starting with: B 🐻" />);
 
       expect(screen.getByText(/Whack words starting with: B 🐻/i)).toBeDefined();
       expect(screen.getByText(/Hits: 0 \/ 10/i)).toBeDefined();
-      expect(screen.getByText(/45s/i)).toBeDefined();
+      // Child pacing default timer is 75s
+      expect(screen.getByText(/75s/i)).toBeDefined();
 
       for (let i = 0; i < 9; i++) {
         expect(screen.getByTestId(`mole-hole-${i}`)).toBeDefined();
+        const holeWordBtn = screen.getByTestId(`hole-word-${i}`) as HTMLButtonElement;
+        expect(holeWordBtn).toBeDefined();
+        expect(holeWordBtn.textContent?.trim().length).toBeGreaterThan(0);
+        // Initially DOWN -> greyed out
+        expect(holeWordBtn.disabled).toBe(true);
+        expect(holeWordBtn.className).toContain('text-slate-400');
       }
     });
 
-    it('moles can ONLY be whacked when in UP state', () => {
+    it('moles can ONLY be whacked when in UP state (greyed-out words cannot be scored via voice or click)', () => {
       render(<WhackAMoleGame targetHits={10} timeLimit={45} />);
 
       // Initially all holes are DOWN (disabled)
       for (let i = 0; i < 9; i++) {
         const btn = screen.getByTestId(`mole-btn-${i}`) as HTMLButtonElement;
+        const wordBtn = screen.getByTestId(`hole-word-${i}`) as HTMLButtonElement;
         expect(btn.disabled).toBe(true);
+        expect(wordBtn.disabled).toBe(true);
 
-        // Clicking a DOWN mole does nothing (hits score remains 0)
+        // Clicking a DOWN mole or greyed-out word label does nothing
         fireEvent.click(btn);
+        fireEvent.click(wordBtn);
         expect(playCorrectChime).not.toHaveBeenCalled();
         expect(playWrongSound).not.toHaveBeenCalled();
       }
+      expect(screen.getByText(/Hits: 0 \/ 10/i)).toBeDefined();
+    });
+
+    it('spoken words targeting greyed-out holes MUST NOT score or register hits', () => {
+      // Setup options where Bear is a target but all holes start DOWN
+      const customOptions = [
+        { id: 't1', word: 'Bear', emoji: '🐻', isTarget: true },
+        { id: 'd1', word: 'Cat', emoji: '🐱', isTarget: false },
+      ];
+
+      render(<WhackAMoleGame options={customOptions} transcript="Bear" />);
+
+      // No mole is UP yet, so speaking "Bear" must NOT register a hit
+      expect(playCorrectChime).not.toHaveBeenCalled();
       expect(screen.getByText(/Hits: 0 \/ 10/i)).toBeDefined();
     });
 
@@ -106,29 +129,101 @@ describe('WhackAMoleGame Component & Utility Functions', () => {
       }
     });
 
-    it('correct hit increments hit count towards 10 and triggers correct chime', () => {
-      // Force custom options with 1 target and 0 distractors to guarantee target hits
-      const customOptions = [
-        { id: 't1', word: 'Bear', emoji: '🐻', isTarget: true },
+    it('correct hit increments hit count towards 10, replaces word with a new option from pool, and lights up', () => {
+      // Provide pool with 10 distinct options so replacement is guaranteed
+      const pool = [
+        { id: 'w0', word: 'Bear', isTarget: true },
+        { id: 'w1', word: 'Bird', isTarget: true },
+        { id: 'w2', word: 'Ball', isTarget: true },
+        { id: 'w3', word: 'Bee', isTarget: true },
+        { id: 'w4', word: 'Banana', isTarget: true },
+        { id: 'w5', word: 'Boat', isTarget: true },
+        { id: 'w6', word: 'Bus', isTarget: true },
+        { id: 'w7', word: 'Book', isTarget: true },
+        { id: 'w8', word: 'Box', isTarget: true },
+        { id: 'w9', word: 'Baby', isTarget: true },
       ];
       const onHit = vi.fn();
 
-      render(<WhackAMoleGame options={customOptions} onHit={onHit} targetHits={10} />);
+      render(<WhackAMoleGame options={pool} onHit={onHit} targetHits={10} />);
 
       act(() => {
         vi.advanceTimersByTime(800);
       });
 
-      const buttons = screen.getAllByRole('button');
-      const upBtn = buttons.find((btn) => btn.getAttribute('data-status') === 'UP');
-      expect(upBtn).toBeDefined();
-
-      if (upBtn) {
-        fireEvent.click(upBtn);
-        expect(playCorrectChime).toHaveBeenCalled();
-        expect(onHit).toHaveBeenCalledWith(1);
-        expect(screen.getByText(/Hits: 1 \/ 10/i)).toBeDefined();
+      // Find lit-up UP mole and its hole index
+      let upHoleIndex = -1;
+      for (let i = 0; i < 9; i++) {
+        const btn = screen.getByTestId(`mole-btn-${i}`);
+        if (btn.getAttribute('data-status') === 'UP') {
+          upHoleIndex = i;
+          break;
+        }
       }
+      expect(upHoleIndex).toBeGreaterThanOrEqual(0);
+
+      const wordBtn = screen.getByTestId(`hole-word-${upHoleIndex}`) as HTMLButtonElement;
+      // Word label is lit up when UP
+      expect(wordBtn.className).toContain('text-amber-500');
+      expect(wordBtn.disabled).toBe(false);
+
+      const initialWord = wordBtn.textContent;
+
+      // Whack via word button or mole button
+      fireEvent.click(wordBtn);
+      expect(playCorrectChime).toHaveBeenCalled();
+      expect(onHit).toHaveBeenCalledWith(1);
+      expect(screen.getByText(/Hits: 1 \/ 10/i)).toBeDefined();
+
+      // In HIT state
+      expect(wordBtn.className).toContain('text-emerald-400');
+
+      // Advance timer for hit completion (400ms)
+      act(() => {
+        vi.advanceTimersByTime(400);
+      });
+
+      // Word should have been replaced with a fresh unchosen word from the pool (or different from initial)
+      const replacedWordBtn = screen.getByTestId(`hole-word-${upHoleIndex}`);
+      expect(replacedWordBtn.textContent).not.toBe(initialWord);
+    });
+
+    it('emergent reader kid-friendly popup stays UP for 4.5s before retracting', () => {
+      const customOptions = [
+        { id: 't1', word: 'Bear', emoji: '🐻', isTarget: true },
+      ];
+
+      render(<WhackAMoleGame options={customOptions} targetHits={10} />);
+
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
+
+      // Find which hole popped up
+      let upIndex = -1;
+      for (let i = 0; i < 9; i++) {
+        if (screen.getByTestId(`mole-btn-${i}`).getAttribute('data-status') === 'UP') {
+          upIndex = i;
+          break;
+        }
+      }
+      expect(upIndex).toBeGreaterThanOrEqual(0);
+
+      // Advance by 3000ms (fast pacing would have retracted by now at 2.5s)
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      // Still UP because kid-friendly pacing is 4.5s-6.0s!
+      expect(screen.getByTestId(`mole-btn-${upIndex}`).getAttribute('data-status')).toBe('UP');
+
+      // Advance beyond 6000ms + retract animation (300ms)
+      act(() => {
+        vi.advanceTimersByTime(3500);
+      });
+
+      // Now it should have retracted
+      expect(screen.getByTestId(`mole-btn-${upIndex}`).getAttribute('data-status')).toBe('DOWN');
     });
 
     it('distractor hit plays wrong sound and shows warning feedback', () => {
